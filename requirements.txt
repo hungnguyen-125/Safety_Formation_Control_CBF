@@ -1,0 +1,6 @@
+numpy
+matplotlib
+scipy
+cvxpy
+qpsolvers
+cvxopt
