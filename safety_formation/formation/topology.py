@@ -25,11 +25,11 @@ class Topology:
         else:
             self.adj_matrix = np.zeros((self.n, self.n))
 
-        # 2. Leader access matrix (diagonal matrix B)
+        # 2. Leader access matrix (diagonal matrix D_lead)
         if leader_access is not None:
-            self.b_diag = np.diag(leader_access)
+            self.D_lead = np.diag(leader_access)
         else:
-            self.b_diag = np.zeros((self.n, self.n))
+            self.D_lead = np.zeros((self.n, self.n))
 
         # Precompute Laplacian matrices
         self.laplacian_matrix = self._compute_laplacian()
@@ -47,29 +47,30 @@ class Topology:
     def _compute_augmented_laplacian(self):
         """
         Compute the augmented Laplacian:
-        H = L + B
-        where B is the leader access matrix.
+        H = L + D_lead
+        where D_lead is the leader access matrix.
         """
-        return self.laplacian_matrix + self.b_diag
+        return self.laplacian_matrix + self.D_lead
 
     def get_augmented_laplacian(self):
         """
         Return the augmented Laplacian matrix H.
         Used in formation control analysis (e.g., stability theorems).
         """
+        # latter use for dynamics topology 
         return self.augmented_laplacian
 
     def get_neighbors(self, agent_id):
         """
         Return the indices of neighboring followers of a given agent.
         """
-        return np.where(self.adj_matrix[agent_id] > 0)[0]
+        return np.where(self.adj_matrix[agent_id - 1] > 0)[0] + 1
 
     def sees_leader(self, agent_id):
         """
         Check whether the given agent has direct access to the leader.
         """
-        return self.b_diag[agent_id, agent_id] > 0
+        return self.D_lead[agent_id - 1, agent_id - 1] > 0
 
     def __repr__(self):
-        return f"Topology(n={self.n}, Leader_Linked={np.any(self.b_diag)})"
+        return f"Topology(n={self.n}, Leader_Linked={np.any(self.D_lead)})"
