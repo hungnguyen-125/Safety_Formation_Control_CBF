@@ -4,3 +4,4 @@ scipy
 cvxpy
 qpsolvers
 cvxopt
+networkx
