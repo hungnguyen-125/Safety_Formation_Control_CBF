@@ -73,9 +73,10 @@ class Topology:
         Check whether the given agent has direct access to the leader.
         """
         return self.D_lead[agent_id - 1, agent_id - 1] > 0
-
+    
     def __repr__(self):
         return f"Topology(n={self.n}, Leader_Linked={np.any(self.D_lead)})"
+    
     
     ################################## Visualization ###################################
     
@@ -160,3 +161,57 @@ class Topology:
 
         ax.axis("off")
         return ax    
+
+
+# from scipy.spatial.distance import pdist, squareform
+
+# class DynamicDiskTopology:
+#     def __init__(self, num_agents, alpha_list, beta_list, gamma, Ds):
+#         """
+#         alpha_list: Danh sách gia tốc phanh tối đa của từng robot [alpha_1, ..., alpha_N]
+#         beta_list: Danh sách vận tốc tối đa của từng robot [beta_1, ..., beta_N]
+#         gamma: Tham số của hàm ZCBF (hệ số trong h^3)
+#         Ds: Khoảng cách an toàn tối thiểu
+#         """
+#         self.n = num_agents
+#         self.alphas = np.array(alpha_list)
+#         self.betas = np.array(beta_list)
+#         self.gamma = gamma
+#         self.Ds = Ds
+        
+#         # Tính các thông số chung của đội hình theo bài báo
+#         self.alpha_min = np.min(self.alphas)
+#         self.alpha_max = np.max(self.alphas)
+#         self.beta_max = np.max(self.betas)
+        
+#         # Tính bán kính lân cận riêng biệt cho từng robot theo công thức (10)
+#         self.sensing_radii = self._compute_neighborhood_radii()
+        
+#         # Khởi tạo ma trận rỗng
+#         self.adj_matrix = np.zeros((self.n, self.n))
+
+#     def _compute_neighborhood_radii(self):
+#         """Hiện thực hóa công thức tính D_N^i trong image_350946.png"""
+#         radii = []
+#         for i in range(self.n):
+#             # Thành phần trong ngoặc lớn của công thức (10)
+#             term_sqrt = np.cbrt((2 * (self.alphas[i] + self.alpha_max)) / self.gamma)
+#             main_term = (term_sqrt + self.betas[i] + self.beta_max)**2
+            
+#             # Công thức đầy đủ cho D_N^i
+#             Di_N = self.Ds + (1 / (2 * (self.alphas[i] + self.alpha_min))) * main_term
+#             radii.append(Di_N)
+#         return np.array(radii)
+
+#     def update(self, positions):
+#         """Cập nhật adj_matrix dựa trên vị trí tức thời và D_N^i"""
+#         dist_matrix = squareform(pdist(positions))
+#         new_adj = np.zeros((self.n, self.n))
+        
+#         for i in range(self.n):
+#             # Robot i chỉ 'thấy' robot j nếu khoảng cách <= D_N^i
+#             neighbors = np.where((dist_matrix[i] <= self.sensing_radii[i]) & (dist_matrix[i] > 0))[0]
+#             new_adj[i, neighbors] = 1.0
+            
+#         self.adj_matrix = new_adj
+#         # Sau đó tính lại Laplacian nếu cần cho phần Formation

@@ -1,5 +1,5 @@
 import numpy as np
-from qpsolvers import solve_qp # Cần cài đặt: pip install qpsolvers
+from qpsolvers import solve_qp
 
 class BaseCBF:
     def __init__(self, nominal_controller, safety_dist=0.5):

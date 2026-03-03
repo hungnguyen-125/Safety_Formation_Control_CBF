@@ -23,7 +23,7 @@ class Agent:
         [0, 1]
     ], dtype=float)
 
-    def __init__(self, agent_id, x0, f_target):
+    def __init__(self, agent_id, x0, f_target, alpha = 10, beta = 10):
         """
         Initialize an Agent.
 
@@ -42,6 +42,9 @@ class Agent:
         self.state = np.array(x0, dtype=float).reshape(4, 1)
         self.f = np.array(f_target, dtype=float).reshape(4, 1)
 
+        self.alpha = alpha
+        self.beta = beta
+        
         # Store state history (similar to Simulink "To Workspace" block)
         self.history = []
 
@@ -68,6 +71,9 @@ class Agent:
         """Store a copy of the current state (flattened) for plotting."""
         self.history.append(self.state.flatten())
 
+    def clear_history(self):
+        self.history = []
+        
     @property
     def pos(self):
         """Return current position vector [x, y]^T (2x1)."""
