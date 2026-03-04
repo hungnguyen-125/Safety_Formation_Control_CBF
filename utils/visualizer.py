@@ -145,3 +145,72 @@ def plot_world_trajectories(agents, leader, topology=None, topology_at="final"):
     ax.set_title("World trajectories (leader moves)")
     plt.tight_layout()
     plt.show()
+    
+
+import matplotlib.animation as animation
+
+def generate_formation_video(agents, leader, dt, filename):
+    # Setup Figure to match the style of the provided image
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.set_xlim(-3, 7)  # Requested x-limits
+    ax.set_ylim(-2.5, 2.5)
+    ax.set_aspect('equal')
+    ax.grid(True, linestyle='-', alpha=0.3)
+    ax.set_xlabel(r'$p_x$')
+    ax.set_ylabel(r'$p_y$')
+    ax.set_title("World trajectories (leader moves)")
+
+    # Define styles matching the image
+    # Agent 1: Blue Circle, 2: Orange Triangle, 3: Green Left-Triangle, 
+    # 4: Red Plus, 5: Purple Square, 6: Brown Star, Leader: Pink Star
+    styles = {
+        1: {'color': 'tab:blue',   'marker': 'o'},
+        2: {'color': 'tab:orange', 'marker': '^'},
+        3: {'color': 'tab:green',  'marker': '>'},
+        4: {'color': 'tab:red',    'marker': '+'},
+        5: {'color': 'tab:purple', 'marker': 's'},
+        6: {'color': 'tab:brown',  'marker': '*'}
+    }
+
+    # Initialize plot elements
+    follower_plots = []
+    follower_trajs = []
+    
+    for ag in agents:
+        s = styles[ag.id]
+        # Current position marker
+        p, = ax.plot([], [], color=s['color'], marker=s['marker'], markersize=8, label=f'agent {ag.id}')
+        follower_plots.append(p)
+        # Trajectory line
+        t, = ax.plot([], [], color=s['color'], linewidth=2, alpha=0.8)
+        follower_trajs.append(t)
+
+    # Leader plot (Pink star)
+    leader_plot, = ax.plot([], [], color='tab:pink', marker='*', markersize=15, label='leader')
+    leader_traj, = ax.plot([], [], color='tab:pink', linewidth=2, alpha=0.8)
+
+    ax.legend(loc='upper left', shadow=True)
+
+    def update(frame):
+        # Update Leader
+        l_hist = np.array(leader.history)
+        leader_plot.set_data([l_hist[frame, 0]], [l_hist[frame, 1]])
+        leader_traj.set_data(l_hist[:frame, 0], l_hist[:frame, 1])
+
+        # Update Followers
+        for i, ag in enumerate(agents):
+            ag_hist = np.array(ag.history)
+            follower_plots[i].set_data([ag_hist[frame, 0]], [ag_hist[frame, 1]])
+            follower_trajs[i].set_data(ag_hist[:frame, 0], ag_hist[:frame, 1])
+
+        return follower_plots + follower_trajs + [leader_plot, leader_traj]
+
+    # Create and Save Animation
+    num_frames = len(agents[0].history)
+    ani = animation.FuncAnimation(fig, update, frames=num_frames, interval=dt*1000, blit=True)
+
+    print(f"Generating {filename}...")
+    # Using 30 FPS or 1/dt for smooth playback
+    ani.save(filename, writer='ffmpeg', fps=int(1/dt))
+    plt.close(fig)
+    print("Video generation complete.")

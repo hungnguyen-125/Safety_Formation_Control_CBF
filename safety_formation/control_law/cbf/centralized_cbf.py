@@ -41,10 +41,21 @@ class CentralizedCBF():
                     term_accel = ((agent_i.alpha + agent_j.alpha)*(dv.T@dp)) / term_safe_v
                     term_v_norm = np.linalg.norm(dv)**2
                     
-                    b_ij = term_gamma - term_projection + term_v_norm + term_accel
-
+                    b_ij = np.array(term_gamma - term_projection + term_v_norm + term_accel)
+                    
+                    # if np.isnan(b_ij):
+                    #     print(f"Lỗi NAN tại cặp agent {i}-{j}")
+                    #     print(f"dist: {dist}, safe_v: {term_safe_v}, dp: {dp}, dv: {dv}")
+                    #     # Tạm thời gán b_ij bằng một số rất nhỏ để không crash
+                    #     b_ij = -1.0
+                        
                     G_list.append(row_G)
-                    h_list.append(b_ij)
+                    # Thay vì h_list.append(b_ij)
+                    val_b = np.asarray(b_ij).item() # Lấy giá trị duy nhất ra khỏi mọi lớp mảng
+                    if np.isinf(val_b) or np.isnan(val_b):
+                        val_b = -1e6 # Thay thế -inf bằng một số âm rất lớn nhưng hữu hạn
+                    h_list.append(float(val_b))
+                    
                     
         for i in range(N):
             limit = all_agents[i].alpha
@@ -62,6 +73,7 @@ class CentralizedCBF():
 
         # --- 4. Giải bài toán QP ---
         G = np.array(G_list)
+        # print(h_list)
         h = np.array(h_list).flatten()
         
         u_all_safe = solve_qp(P, q, G, h, solver="quadprog")

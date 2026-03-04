@@ -1,0 +1,19 @@
+{
+    "ROS2.distro": "jazzy",
+    "python.autoComplete.extraPaths": [
+        "/home/hung-nguyen/ros2_ws/install/my_robot_interfaces/lib/python3.12/site-packages",
+        "/home/hung-nguyen/ros2_ws/install/my_py_pkg/lib/python3.12/site-packages",
+        "/home/hung-nguyen/act_2_ws/install/power_led_pkg/lib/python3.12/site-packages",
+        "/home/hung-nguyen/act_2_ws/install/power_led_interface/lib/python3.12/site-packages",
+        "/home/hung-nguyen/act_2_ws/install/act_num_pkg/lib/python3.12/site-packages",
+        "/opt/ros/jazzy/lib/python3.12/site-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/hung-nguyen/ros2_ws/install/my_robot_interfaces/lib/python3.12/site-packages",
+        "/home/hung-nguyen/ros2_ws/install/my_py_pkg/lib/python3.12/site-packages",
+        "/home/hung-nguyen/act_2_ws/install/power_led_pkg/lib/python3.12/site-packages",
+        "/home/hung-nguyen/act_2_ws/install/power_led_interface/lib/python3.12/site-packages",
+        "/home/hung-nguyen/act_2_ws/install/act_num_pkg/lib/python3.12/site-packages",
+        "/opt/ros/jazzy/lib/python3.12/site-packages"
+    ]
+}
