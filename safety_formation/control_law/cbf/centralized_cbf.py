@@ -43,12 +43,6 @@ class CentralizedCBF():
                     
                     b_ij = np.array(term_gamma - term_projection + term_v_norm + term_accel)
                     
-                    # if np.isnan(b_ij):
-                    #     print(f"Lỗi NAN tại cặp agent {i}-{j}")
-                    #     print(f"dist: {dist}, safe_v: {term_safe_v}, dp: {dp}, dv: {dv}")
-                    #     # Tạm thời gán b_ij bằng một số rất nhỏ để không crash
-                    #     b_ij = -1.0
-                        
                     G_list.append(row_G)
                     # Thay vì h_list.append(b_ij)
                     val_b = np.asarray(b_ij).item() # Lấy giá trị duy nhất ra khỏi mọi lớp mảng
