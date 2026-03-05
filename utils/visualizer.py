@@ -149,7 +149,7 @@ def plot_world_trajectories(agents, leader, topology=None, topology_at="final"):
 
 import matplotlib.animation as animation
 
-def generate_formation_video(agents, leader, dt, filename):
+def generate_formation_video(agents, leader, dt, filename, graph_title = "World trajectories (leader moves)"):
     # Setup Figure to match the style of the provided image
     fig, ax = plt.subplots(figsize=(12, 6))
     ax.set_xlim(-3, 7)  # Requested x-limits
@@ -158,7 +158,7 @@ def generate_formation_video(agents, leader, dt, filename):
     ax.grid(True, linestyle='-', alpha=0.3)
     ax.set_xlabel(r'$p_x$')
     ax.set_ylabel(r'$p_y$')
-    ax.set_title("World trajectories (leader moves)")
+    ax.set_title(graph_title)
 
     # Define styles matching the image
     # Agent 1: Blue Circle, 2: Orange Triangle, 3: Green Left-Triangle, 
