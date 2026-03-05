@@ -54,9 +54,9 @@ class DecentralizedCBF():
             # Barrier dynamics components
             term_gamma = self.gamma * (h_ij**3) * dist
             term_projection = ((dv.T @ dp)**2) / (dist_sq + eps)
-            term_v_norm = np.sum(dv**2)
+            term_v_norm = np.linalg.norm(dv**2)
             # Add eps to term_safe_v to prevent overflow/inf when at the safety boundary.
-            term_accel = ((agent_i.alpha + agent_j.alpha) * (dv.T @ dp)) / (dist * (term_safe_v + eps))
+            term_accel = ((agent_i.alpha + agent_j.alpha) * (dv.T @ dp)) / (term_safe_v + eps)
             
             # Total bound b_ij
             b_ij = term_gamma - term_projection + term_v_norm + term_accel
@@ -69,6 +69,9 @@ class DecentralizedCBF():
             if np.isinf(val_b) or np.isnan(val_b):
                 val_b = -1e3 
             h_list.append(float(val_b))
+            
+            # Inside the loop for a specific pair of agents
+            # print(f"Dist: {dist:.2f} | h_ij: {h_ij:.2f} | b_ij: {val_b:.2f}")
             
         # 2. Physical Limits (Box Constraints): |ui_x| <= alpha, |ui_y| <= alpha
         alpha = agent_i.alpha

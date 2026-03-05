@@ -56,6 +56,7 @@ class CentralizedCBF():
                         val_b = -1e6 # Thay thế -inf bằng một số âm rất lớn nhưng hữu hạn
                     h_list.append(float(val_b))
                     
+                    # print(f"Dist: {dist:.2f} | h_ij: {h_ij:.2f} | b_ij: {val_b:.2f}")
                     
         for i in range(N):
             limit = all_agents[i].alpha

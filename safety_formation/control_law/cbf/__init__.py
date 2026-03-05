@@ -1,3 +1,3 @@
 from .centralized_cbf import CentralizedCBF
-# from .decentralized import DecentralizedCBF
+from .decentralized_cbf import DecentralizedCBF
 # from .distributed import DistributedCBF
