@@ -5,19 +5,21 @@ class CentralizedCBF():
     def __init__(self, gamma, safety_dis = 0.5):
         
         self.d_min = safety_dis
-        
         self.gamma = gamma
         
     def compute_safe_control(self, all_agents, topology, u_nom):
         
         N = len(all_agents)
         
-        P = 2.0 *np.eye(2* N)
-        q = -2.0* u_nom.flatten()
+        # Define QP cost matrices: minimize 1/2 * u^T * P * u + q^T * u
+        # This setup minimizes ||u - u_nom||^2
+        P = 2.0 * np.eye(2 * N)
+        q = -2.0 * u_nom.flatten()
         
         G_list = []
         h_list = []
         
+        # Iterate through agent pairs to define safety constraints
         for i in range(N):
             for j in range(i+1, N):
                 if topology.adj_matrix[i, j] > 0:
@@ -27,53 +29,58 @@ class CentralizedCBF():
                     dp = agent_i.pos - agent_j.pos
                     dv = agent_i.vel - agent_j.vel
 
+                    # Avoid division by zero if agents are at the same position
                     dist = max(np.linalg.norm(dp), 0.001)
                     
-                    term_safe_v = np.sqrt(2*(agent_i.alpha + agent_j.alpha)*(dist - self.d_min))
-                    h_ij = term_safe_v + (dp.T@dv)/dist
+                    # Calculate safety barrier function components
+                    term_safe_v = np.sqrt(2 * (agent_i.alpha + agent_j.alpha) * (dist - self.d_min))
+                    h_ij = term_safe_v + (dp.T @ dv) / dist
 
+                    # Define the constraint row: G * u <= h
                     row_G = np.zeros(2 * N)
-                    row_G[2*i : 2*i+2] = -dp.flatten() # Phần cho u_i
-                    row_G[2*j : 2*j+2] = dp.flatten()  # Phần cho u_j
+                    row_G[2*i : 2*i+2] = -dp.flatten() # Components for agent i control (u_i)
+                    row_G[2*j : 2*j+2] = dp.flatten()  # Components for agent j control (u_j)
                     
                     term_gamma = self.gamma * (h_ij**3) * dist
-                    term_projection = ((dv.T@dp)/dist)**2
-                    term_accel = ((agent_i.alpha + agent_j.alpha)*(dv.T@dp)) / term_safe_v
+                    term_projection = ((dv.T @ dp) / dist)**2
+                    term_accel = ((agent_i.alpha + agent_j.alpha) * (dv.T @ dp)) / term_safe_v
                     term_v_norm = np.linalg.norm(dv)**2
                     
                     b_ij = np.array(term_gamma - term_projection + term_v_norm + term_accel)
                     
                     G_list.append(row_G)
-                    # Thay vì h_list.append(b_ij)
-                    val_b = np.asarray(b_ij).item() # Lấy giá trị duy nhất ra khỏi mọi lớp mảng
+                    
+                    # Extract single value from array/list structures
+                    val_b = np.asarray(b_ij).item() 
+                    
+                    # Numerical stability: handle infinite or NaN values
                     if np.isinf(val_b) or np.isnan(val_b):
-                        val_b = -1e6 # Thay thế -inf bằng một số âm rất lớn nhưng hữu hạn
+                        # Replace with a large finite negative number to keep the constraint strict
+                        val_b = -1e6 
                     h_list.append(float(val_b))
                     
-                    # print(f"Dist: {dist:.2f} | h_ij: {h_ij:.2f} | b_ij: {val_b:.2f}")
-                    
+        # Define individual actuator limits for each agent
         for i in range(N):
             limit = all_agents[i].alpha
-            # uix <= alpha_i
+            # Constraint: u_ix <= alpha_i
             row_limit_pos_x = np.zeros(2 * N); row_limit_pos_x[2*i] = 1
-            # -uix <= alpha_i
+            # Constraint: -u_ix <= alpha_i
             row_limit_neg_x = np.zeros(2 * N); row_limit_neg_x[2*i] = -1
-            # uiy <= alpha_i
+            # Constraint: u_iy <= alpha_i
             row_limit_pos_y = np.zeros(2 * N); row_limit_pos_y[2*i+1] = 1
-            # -uiy <= alpha_i
+            # Constraint: -u_iy <= alpha_i
             row_limit_neg_y = np.zeros(2 * N); row_limit_neg_y[2*i+1] = -1
             
             G_list.extend([row_limit_pos_x, row_limit_neg_x, row_limit_pos_y, row_limit_neg_y])
             h_list.extend([limit, limit, limit, limit])
 
-        # --- 4. Giải bài toán QP ---
+        # --- 4. Solve the Quadratic Programming (QP) problem ---
         G = np.array(G_list)
-        # print(h_list)
         h = np.array(h_list).flatten()
         
         u_all_safe = solve_qp(P, q, G, h, solver="quadprog")
         
-        # Tách kết quả u_all_safe (2N,) thành danh sách các u_i (2,1)
+        # Reshape the flat u_all_safe result (2N,) back into a list of u_i (N, 2)
         if u_all_safe is not None:
             return u_all_safe.reshape(N, 2)
         else:
