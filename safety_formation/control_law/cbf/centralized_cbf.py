@@ -23,6 +23,7 @@ class CentralizedCBF():
         for i in range(N):
             for j in range(i+1, N):
                 if topology.adj_matrix[i, j] > 0:
+                    
                     agent_i = all_agents[i]
                     agent_j = all_agents[j]
 
@@ -83,6 +84,23 @@ class CentralizedCBF():
         # Reshape the flat u_all_safe result (2N,) back into a list of u_i (N, 2)
         if u_all_safe is not None:
             return u_all_safe.reshape(N, 2)
-        else:
-            print("QP Solver failed to find a solution!")
-            return None
+        
+        # u_fallback = []
+
+        # for ag in all_agents:
+        #     v = ag.vel.flatten()
+        #     v_norm = np.linalg.norm(v)
+
+        #     if v_norm > 1e-6:
+        #         u = -ag.alpha * v / v_norm
+        #     else:
+        #         u = np.zeros(2)
+
+        #     u_fallback.append(u)
+
+        # return np.array(u_fallback)
+        
+        else: 
+            return np.zeros((N,2))
+            
+

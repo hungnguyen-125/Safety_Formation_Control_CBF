@@ -2,7 +2,7 @@ import numpy as np
 from qpsolvers import solve_qp
 
 class DecentralizedCBF():
-    def __init__(self, gamma, safety_dis=0.5):
+    def __init__(self, gamma, k = 1, safety_dis=0.5):
         """
         Initialize the Decentralized Control Barrier Function filter.
         :param gamma: Gain for the CBF constraint (higher = more aggressive).
@@ -10,6 +10,7 @@ class DecentralizedCBF():
         """
         self.d_min = safety_dis
         self.gamma = gamma
+        self.p = 2*k + 1
         
     def compute_safe_control(self, agent_i, agent_id, all_agents, neighbor_list, u_nom_i):
         """
@@ -37,7 +38,7 @@ class DecentralizedCBF():
             if j == agent_id:
                 continue # Skip self-comparison
                 
-            agent_j = all_agents[j]
+            agent_j = all_agents[j - 1]
             
             # Relative position and velocity vectors
             dp = agent_i.pos - agent_j.pos
@@ -52,23 +53,21 @@ class DecentralizedCBF():
             term_safe_v = np.sqrt(safe_val)
             h_ij = term_safe_v + (dp.T @ dv) / dist
             
-            # # Constraint Matrix G: In decentralized mode, we only control agent i.
-            # # The derivative of the barrier function leads to -dp^T * u_i.
-            # G_list.append(-dp.flatten())
-            
             # Barrier dynamics components
-            term_gamma = self.gamma * (h_ij**3) * dist
+            term_gamma = self.gamma * (h_ij**self.p) * dist
             term_projection = ((dv.T @ dp)**2) / (dist_sq + eps)
             term_v_norm = np.linalg.norm(dv)**2
             # Add eps to term_safe_v to prevent overflow/inf when at the safety boundary.
             term_accel = ((agent_i.alpha + agent_j.alpha) * (dv.T @ dp)) / (term_safe_v + eps)
+            
+            # pridicted_agent_j_acc = np.dot(dp,agent_j.alpha)
             
             # Total bound b_ij
             b_ij = term_gamma - term_projection + term_v_norm + term_accel
             
             # Distributed Responsibility: Share the burden based on max acceleration (alpha).
             distributed_term = agent_i.alpha / (agent_i.alpha + agent_j.alpha)
-            val_b = b_ij * distributed_term
+            val_b = float(np.asarray(b_ij * distributed_term).item())
             
             # Stability Check: Replace invalid numbers with a large negative value to force safety.
             if np.isinf(val_b) or np.isnan(val_b):
@@ -76,7 +75,7 @@ class DecentralizedCBF():
             h_list.append(float(val_b))
             
             # G_ij * u - delta <= val_b
-            G_list.append(np.array([-dp[0], -dp[1], -1.0]))
+            G_list.append(np.array([-float(dp[0, 0]), -float(dp[1, 0]), -1.0]))
         
             # Inside the loop for a specific pair of agents
             # print(f"Dist: {dist:.2f} | h_ij: {h_ij:.2f} | b_ij: {val_b:.2f}")
@@ -104,8 +103,6 @@ class DecentralizedCBF():
             return u_safe.reshape(2, 1)
     
         return np.zeros((2, 1))
-    
-    
     
     
     def compute_relax_safe_control(self, agent_i, agent_id, all_agents, neighbor_list, u_nom_i):
@@ -152,7 +149,7 @@ class DecentralizedCBF():
             # G_list.append(-dp.flatten())
             
             # Barrier dynamics components
-            term_gamma = self.gamma * (h_ij**3) * dist
+            term_gamma = self.gamma * (h_ij**self.p) * dist
             term_projection = ((dv.T @ dp)**2) / (dist_sq + eps)
             term_v_norm = np.linalg.norm(dv)**2
             # Add eps to term_safe_v to prevent overflow/inf when at the safety boundary.
@@ -179,8 +176,12 @@ class DecentralizedCBF():
             # Inside the loop for a specific pair of agents
             # print(f"Dist: {dist:.2f} | h_ij: {h_ij:.2f} | b_ij: {val_b:.2f}")
             
-        # Constraint: delta >= 0 
-        
+            # Constraint: krj >= 1
+            row_limit_krj = np.zeros(n_vars)
+            row_limit_krj[2 + k] = -1.0
+            G_list.append(row_limit_krj)
+            h_list.append(-1.0)
+            
         # 2. Physical Limits (Box Constraints): |ui_x| <= alpha, |ui_y| <= alpha
         alpha = agent_i.alpha
         
