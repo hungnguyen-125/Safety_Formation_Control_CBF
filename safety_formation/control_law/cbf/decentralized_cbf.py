@@ -129,7 +129,7 @@ class DecentralizedCBF():
             if j == agent_id:
                 continue # Skip self-comparison
                 
-            agent_j = all_agents[j]
+            agent_j = all_agents[j - 1]
             
             # Relative position and velocity vectors
             dp = agent_i.pos - agent_j.pos
@@ -165,12 +165,12 @@ class DecentralizedCBF():
             # Stability Check: Replace invalid numbers with a large negative value to force safety.
             if np.isinf(val_b) or np.isnan(val_b):
                 val_b = -1e3 
-            h_list.append(float(val_b))
+            h_list.append(float(val_b.item()))
             
             # G_ij * u - delta <= val_b
             G_row = np.zeros(n_vars)
-            G_row[0:2] = [-dp[0], -dp[1]]
-            G_row[2 + k] = - (agent_i.alpha * term_gamma/((agent_i.alpha + agent_j.alpha)*np.sqrt(cK)))
+            G_row[0:2] = [-dp[0,0], -dp[1,0]]
+            G_row[2 + k] = - (agent_i.alpha * term_gamma.item()/((agent_i.alpha + agent_j.alpha)*np.sqrt(cK)))
 
             G_list.append(G_row)
             # Inside the loop for a specific pair of agents
@@ -206,6 +206,8 @@ class DecentralizedCBF():
         
         if sol is not None:
             u_safe = sol[0:2]
+            # print(sol[3] / np.sqrt(cK))
             return u_safe.reshape(2, 1)
+
     
         return np.zeros((2, 1))

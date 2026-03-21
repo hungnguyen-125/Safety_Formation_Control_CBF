@@ -22,7 +22,7 @@ class CentralizedCBF():
         # Iterate through agent pairs to define safety constraints
         for i in range(N):
             for j in range(i+1, N):
-                if topology.adj_matrix[i, j] > 0:
+                if topology.adj_matrix[i, j] > 0 or topology.adj_matrix[j, i] > 0:
                     
                     agent_i = all_agents[i]
                     agent_j = all_agents[j]
