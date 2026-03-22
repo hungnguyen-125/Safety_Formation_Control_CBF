@@ -1,5 +1,6 @@
 import numpy as np
 from qpsolvers import solve_qp
+from scipy.optimize import linprog
 
 class DecentralizedCBF():
     def __init__(self, gamma, k = 1, safety_dis=0.5):
@@ -101,9 +102,12 @@ class DecentralizedCBF():
             if slack_val > 0.1:
                 print(f"Warning: Safety violated! Slack: {slack_val:.4f}")
             return u_safe.reshape(2, 1)
-    
-        return np.zeros((2, 1))
-    
+
+        # elif slack_val > 10 and np.linalg.norm(agent_i.vel) == 0:
+        #     return np.zeros((2, 1))
+        
+        # elif slack_val > 10 and np.linalg.norm(agent_i.vel) != 0:
+        #     return -agent_i.alpha* agent_i.vel/np.linalg.norm(agent_i.vel)
     
     def compute_relax_safe_control(self, agent_i, agent_id, all_agents, neighbor_list, u_nom_i):
         """
@@ -209,5 +213,35 @@ class DecentralizedCBF():
             # print(sol[3] / np.sqrt(cK))
             return u_safe.reshape(2, 1)
 
-    
-        return np.zeros((2, 1))
+        elif sol is None and np.linalg.norm(agent_i.vel) == 0:
+            return np.zeros((2, 1))
+        
+        elif sol is None and np.linalg.norm(agent_i.vel) != 0:
+            return -agent_i.alpha* agent_i.vel/np.linalg.norm(agent_i.vel)
+
+
+############################## Deadlock ######################################
+def decentralized_lp(self, G, h, alpha):
+        """
+        Step 1: Solves a Linear Program to find the safety margin delta_LP.
+        Objective: Maximize delta_LP (Check if the admissible control space is empty).
+        """
+        # Objective vector: [ux, uy, delta_lp] -> we want to maximize delta_lp
+        # Minimizing -delta_lp is equivalent to maximizing delta_lp.
+        c = np.array([0, 0, -1.0]) 
+        
+        # Constraint: G*u <= h + delta_lp * 1  => G*u - delta_lp * 1 <= h
+        # We augment the G matrix with a column of -1s for the delta variable.
+        A_ub = np.hstack([G, -np.ones((G.shape[0], 1))])
+        b_ub = h
+        
+        # Physical box constraints: |ux| <= alpha, |uy| <= alpha
+        # delta_lp is unconstrained (can be positive or negative).
+        bounds = [(-alpha, alpha), (-alpha, alpha), (None, None)]
+        
+        # Solve using the HiGHS method for efficiency
+        res = linprog(c, A_ub=A_ub, b_ub=b_ub, bounds=bounds, method='highs')
+        
+        if res.success:
+            return res.x[2] # Return the optimized delta_LP
+        return 0.0

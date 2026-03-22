@@ -80,25 +80,25 @@ class CentralizedCBF():
         h = np.array(h_list).flatten()
         
         u_all_safe = solve_qp(P, q, G, h, solver="quadprog")
+        u_fallback = []
         
         # Reshape the flat u_all_safe result (2N,) back into a list of u_i (N, 2)
         if u_all_safe is not None:
             return u_all_safe.reshape(N, 2)
         
-        # u_fallback = []
+        # elif u_all_safe is None and :
+        #     for ag in all_agents:
+        #         v = ag.vel.flatten()
+        #         v_norm = np.linalg.norm(v)
 
-        # for ag in all_agents:
-        #     v = ag.vel.flatten()
-        #     v_norm = np.linalg.norm(v)
+        #         if v_norm > 1e-6:
+        #             u = -ag.alpha * v / v_norm
+        #         else:
+        #             u = np.zeros(2)
 
-        #     if v_norm > 1e-6:
-        #         u = -ag.alpha * v / v_norm
-        #     else:
-        #         u = np.zeros(2)
+        #         u_fallback.append(u)
 
-        #     u_fallback.append(u)
-
-        # return np.array(u_fallback)
+        #     return np.array(u_fallback)
         
         else: 
             return np.zeros((N,2))
