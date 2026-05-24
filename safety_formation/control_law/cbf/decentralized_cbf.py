@@ -109,7 +109,7 @@ class DecentralizedCBF():
         # elif slack_val > 10 and np.linalg.norm(agent_i.vel) != 0:
         #     return -agent_i.alpha* agent_i.vel/np.linalg.norm(agent_i.vel)     
 
-    def compute_relax_safe_control( self, agent_i, agent_id, all_agents, neighbor_list, u_nom_i, deadlock=None, u_hat_i=None):
+    def compute_relax_safe_control( self, agent_i, agent_id, all_agents, neighbor_list, u_nom_i, deadlock=None, u_safe_i=None):
         """
         Decision variables:
             x = [u_x, u_y, z_0, z_1, ..., z_{n_neighbor-1}]^T
@@ -205,10 +205,10 @@ class DecentralizedCBF():
         # left side  -> relaxed     -> z_k > sqrt(cK)
         # right side -> compressed  -> 0 < z_k < sqrt(cK)
         if deadlock is not None:
-            if u_hat_i is None:
+            if u_safe_i is None:
                 raise ValueError("u_hat_i must be provided for Type 1 deadlock handling.")
 
-            u_hat = np.asarray(u_hat_i, dtype=float).reshape(2,)
+            u_hat = np.asarray(u_safe_i, dtype=float).reshape(2,)
 
             # If nominal direction is nearly zero, fallback to no asymmetry
             if np.linalg.norm(u_hat) > cross_tol:
@@ -243,38 +243,8 @@ class DecentralizedCBF():
         return (-agent_i.alpha * vel / vel_norm).reshape(2, 1)
 
 
-    def compute_constraint(self, agent_i, agent_id, all_agents, neighbor_list, include_box=False):
-        """
-        Build local decentralized CBF constraints for agent i:
-
-            A_i u_i <= b_i
-
-        where each row corresponds to one neighbor j.
-
-        Parameters
-        ----------
-        agent_i : Agent
-            Current agent i.
-        agent_id : int
-            1-based ID of agent i.
-        all_agents : list
-            List of agents ordered by ID, so all_agents[j-1] is agent j.
-        neighbor_list : iterable
-            1-based neighbor IDs of agent i.
-        include_box : bool
-            If True, append actuator box constraints:
-                [ 1, 0] u <= alpha
-                [-1, 0] u <= alpha
-                [ 0, 1] u <= alpha
-                [ 0,-1] u <= alpha
-
-        Returns
-        -------
-        A : np.ndarray, shape (m, 2)
-            Constraint matrix.
-        b : np.ndarray, shape (m,)
-            Constraint vector.
-        """
+    def compute_constraint(self, agent_i, agent_id, all_agents, neighbor_list, u_i = None):
+       
         eps = 1e-6
 
         A_list = []
@@ -329,18 +299,16 @@ class DecentralizedCBF():
 
             A_list.append(A_row)
             b_list.append(val_b)
+        
+        alpha = float(agent_i.alpha)
 
-        # optional actuator box constraints
-        if include_box:
-            alpha = float(agent_i.alpha)
-
-            A_list.extend([
-                np.array([ 1.0,  0.0]),
-                np.array([-1.0,  0.0]),
-                np.array([ 0.0,  1.0]),
-                np.array([ 0.0, -1.0]),
-            ])
-            b_list.extend([alpha, alpha, alpha, alpha])
+        A_list.extend([
+            np.array([ 1.0,  0.0]),
+            np.array([-1.0,  0.0]),
+            np.array([ 0.0,  1.0]),
+            np.array([ 0.0, -1.0]),
+        ])
+        b_list.extend([alpha, alpha, alpha, alpha])
 
         if len(A_list) == 0:
             A = np.zeros((0, 2), dtype=float)
@@ -349,4 +317,22 @@ class DecentralizedCBF():
             A = np.array(A_list, dtype=float)
             b = np.array(b_list, dtype=float)
 
-        return A, b
+        if u_i is None or np.linalg.norm(u_i) > 1e-3:
+            n_active_constraints = 0
+        else:
+            n_active_constraints = count_active_constraints(u_i, A, b)
+        
+        return A, b, n_active_constraints
+
+def count_active_constraints(u, A, b, tol=1e-3):
+    if u is None:
+        return 0
+
+    ui = u.flatten()
+    active = 0
+
+    for i in range(A.shape[0]):
+        if abs(A[i] @ ui - b[i]) <= tol:
+            active += 1
+
+    return active

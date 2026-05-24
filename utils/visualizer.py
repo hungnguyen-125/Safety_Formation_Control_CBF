@@ -1,6 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+import matplotlib.animation as animation
+
+from matplotlib.patches import Circle
+
 def plot_formation_error(norms, dt, title=r"Formation error $\|\delta_i\|$", caption=None):
     """
     norms: (T,N) matrix
@@ -101,41 +105,104 @@ def plot_relative_trajectories(agents, leader, topology, show_topology_at="final
     plt.tight_layout()
     plt.show()
     
-def plot_world_trajectories(agents, leader, topology=None, topology_at="final"):
+from matplotlib.patches import Circle
+import numpy as np
+import matplotlib.pyplot as plt
+
+def plot_world_trajectories(
+        agents,
+        leader,
+        topology=None,
+        topology_at="final",
+        obstacles=None,
+        d_min=None):
+
     N = len(agents)
     T = len(agents[0].history)
 
-    leader_xy = np.array(leader.history)[:, :2]  # (T,2)
+    leader_xy = np.array(leader.history)[:, :2]
 
-    # time index for topology overlay (optional)
     if topology_at == "final":
-        k = T-1
+        k = T - 1
     elif topology_at == "initial":
         k = 0
     else:
         k = int(topology_at)
 
-    plt.figure(figsize=(10,8))
+    plt.figure(figsize=(10, 8))
     ax = plt.gca()
 
-    # followers
-    markers = ['o','^','>','+','s','*','D','v','<','x']
+    # Followers
+    markers = ['o', '^', '>', '+', 's', '*', 'D', 'v', '<', 'x']
+
     for i, ag in enumerate(agents):
         xy = np.array(ag.history)[:, :2]
-        ax.plot(xy[:,0], xy[:,1], linewidth=2, marker=markers[i % len(markers)],
-                markevery=[0, k], markersize=8, label=f"agent {ag.id}")
 
-    # leader (world)
-    ax.plot(leader_xy[:,0], leader_xy[:,1], linewidth=2, marker='*',markersize=14, markevery=[0, k], label="leader")
+        ax.plot(
+            xy[:, 0],
+            xy[:, 1],
+            linewidth=2,
+            marker=markers[i % len(markers)],
+            markevery=[0, k],
+            markersize=8,
+            label=f"agent {ag.id}"
+        )
 
-    # optional: dashed topology links at time k
+    # Leader
+    ax.plot(
+        leader_xy[:, 0],
+        leader_xy[:, 1],
+        linewidth=2,
+        marker='*',
+        markersize=14,
+        markevery=[0, k],
+        label="leader"
+    )
+
+    # Obstacles
+    if obstacles is not None:
+        for idx, obs in enumerate(obstacles):
+            obs_center = np.asarray(obs["center"], dtype=float).reshape(-1)[:2]
+            obs_radius = float(obs["radius"])
+
+            obs_patch = Circle(
+                obs_center,
+                radius=obs_radius,
+                fill=True,
+                alpha=0.35,
+                color="black",
+                label="obstacle" if idx == 0 else None
+            )
+            ax.add_patch(obs_patch)
+
+            # Optional inflated safety zone
+            if d_min is not None:
+                obs_safe_patch = Circle(
+                    obs_center,
+                    radius=obs_radius + d_min,
+                    fill=False,
+                    linestyle="--",
+                    alpha=0.5,
+                    color="black",
+                    label="obstacle safety zone" if idx == 0 else None
+                )
+                ax.add_patch(obs_safe_patch)
+
+    # Optional topology links at time k
     if topology is not None:
-        Pk = np.array([np.array(ag.history)[k,:2] for ag in agents])  # (N,2)
+        Pk = np.array([np.array(ag.history)[k, :2] for ag in agents])
         A = topology.adj_matrix
+
         for i in range(N):
-            for j in range(i+1, N):
-                if A[i,j] > 0 or A[j,i] > 0:
-                    ax.plot([Pk[i,0],Pk[j,0]], [Pk[i,1],Pk[j,1]], '--', linewidth=1, alpha=0.6)
+            for j in range(i + 1, N):
+                if A[i, j] > 0 or A[j, i] > 0:
+                    ax.plot(
+                        [Pk[i, 0], Pk[j, 0]],
+                        [Pk[i, 1], Pk[j, 1]],
+                        '--',
+                        linewidth=1,
+                        alpha=0.6
+                    )
 
     ax.set_xlabel(r"$p_x$")
     ax.set_ylabel(r"$p_y$")
@@ -143,16 +210,30 @@ def plot_world_trajectories(agents, leader, topology=None, topology_at="final"):
     ax.set_aspect("equal", adjustable="box")
     ax.legend(loc="upper left", frameon=True, edgecolor="black")
     ax.set_title("World trajectories (leader moves)")
+
     plt.tight_layout()
     plt.show()
-    
 
-import matplotlib.animation as animation
 
-def generate_formation_video(agents, leader, dt, filename, graph_title = "World trajectories (leader moves)"):
-    # Setup Figure to match the style of the provided image
+from matplotlib.patches import Circle
+from matplotlib import animation
+import matplotlib.pyplot as plt
+import numpy as np
+
+def generate_formation_video(
+        agents,
+        leader,
+        dt,
+        T,
+        d_min,
+        filename,
+        obstacles=None,
+        arrow_mode="velocity",   # "velocity" or "target"
+        arrow_length=0.35,
+        graph_title="World trajectories (leader moves)"):
+
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.set_xlim(-3, 7)  # Requested x-limits
+    ax.set_xlim(-3, T + 2)
     ax.set_ylim(-2.5, 2.5)
     ax.set_aspect('equal')
     ax.grid(True, linestyle='-', alpha=0.3)
@@ -160,9 +241,6 @@ def generate_formation_video(agents, leader, dt, filename, graph_title = "World 
     ax.set_ylabel(r'$p_y$')
     ax.set_title(graph_title)
 
-    # Define styles matching the image
-    # Agent 1: Blue Circle, 2: Orange Triangle, 3: Green Left-Triangle, 
-    # 4: Red Plus, 5: Purple Square, 6: Brown Star, Leader: Pink Star
     styles = {
         1: {'color': 'tab:blue',   'marker': 'o'},
         2: {'color': 'tab:orange', 'marker': '^'},
@@ -172,45 +250,186 @@ def generate_formation_video(agents, leader, dt, filename, graph_title = "World 
         6: {'color': 'tab:brown',  'marker': '*'}
     }
 
-    # Initialize plot elements
     follower_plots = []
     follower_trajs = []
-    
+    safety_circles = []
+    direction_arrows = []
+    obstacle_patches = []
+
+    # Static obstacles
+    if obstacles is not None:
+        for obs in obstacles:
+            obs_center = np.asarray(obs["center"], dtype=float).reshape(-1)[:2]
+            obs_radius = float(obs["radius"])
+
+            obs_patch = Circle(
+                obs_center,
+                radius=obs_radius,
+                fill=True,
+                alpha=0.35,
+                color="black",
+                label="obstacle" if len(obstacle_patches) == 0 else None
+            )
+            ax.add_patch(obs_patch)
+            obstacle_patches.append(obs_patch)
+
+            obs_safe_patch = Circle(
+                obs_center,
+                radius=obs_radius + d_min,
+                fill=False,
+                linestyle="--",
+                alpha=0.5,
+                color="black"
+            )
+            ax.add_patch(obs_safe_patch)
+            obstacle_patches.append(obs_safe_patch)
+
+    # Followers
     for ag in agents:
         s = styles[ag.id]
-        # Current position marker
-        p, = ax.plot([], [], color=s['color'], marker=s['marker'], markersize=8, label=f'agent {ag.id}')
+
+        p, = ax.plot(
+            [], [],
+            color=s['color'],
+            marker=s['marker'],
+            markersize=8,
+            label=f'agent {ag.id}'
+        )
         follower_plots.append(p)
-        # Trajectory line
-        t, = ax.plot([], [], color=s['color'], linewidth=2, alpha=0.8)
+
+        t, = ax.plot(
+            [], [],
+            color=s['color'],
+            linewidth=2,
+            alpha=0.8
+        )
         follower_trajs.append(t)
 
-    # Leader plot (Pink star)
-    leader_plot, = ax.plot([], [], color='tab:pink', marker='*', markersize=15, label='leader')
-    leader_traj, = ax.plot([], [], color='tab:pink', linewidth=2, alpha=0.8)
+        c = Circle(
+            (0, 0),
+            radius=d_min,
+            fill=False,
+            linestyle='--',
+            alpha=0.5,
+            color=s['color']
+        )
+        ax.add_patch(c)
+        safety_circles.append(c)
+
+        arrow = ax.quiver(
+            [0], [0],
+            [0], [0],
+            color=s['color'],
+            angles='xy',
+            scale_units='xy',
+            scale=1,
+            width=0.006
+        )
+        direction_arrows.append(arrow)
+
+    # Leader
+    leader_plot, = ax.plot(
+        [], [],
+        color='tab:pink',
+        marker='*',
+        markersize=15,
+        label='leader'
+    )
+
+    leader_traj, = ax.plot(
+        [], [],
+        color='tab:pink',
+        linewidth=2,
+        alpha=0.8
+    )
 
     ax.legend(loc='upper left', shadow=True)
 
-    def update(frame):
-        # Update Leader
-        l_hist = np.array(leader.history)
-        leader_plot.set_data([l_hist[frame, 0]], [l_hist[frame, 1]])
-        leader_traj.set_data(l_hist[:frame, 0], l_hist[:frame, 1])
-
-        # Update Followers
-        for i, ag in enumerate(agents):
-            ag_hist = np.array(ag.history)
-            follower_plots[i].set_data([ag_hist[frame, 0]], [ag_hist[frame, 1]])
-            follower_trajs[i].set_data(ag_hist[:frame, 0], ag_hist[:frame, 1])
-
-        return follower_plots + follower_trajs + [leader_plot, leader_traj]
-
-    # Create and Save Animation
     num_frames = len(agents[0].history)
-    ani = animation.FuncAnimation(fig, update, frames=num_frames, interval=dt*1000, blit=True)
+
+    def update(frame):
+        l_hist = np.asarray(leader.history)
+
+        leader_pos = l_hist[frame, :2]
+
+        leader_plot.set_data(
+            [leader_pos[0]],
+            [leader_pos[1]]
+        )
+
+        leader_traj.set_data(
+            l_hist[:frame + 1, 0],
+            l_hist[:frame + 1, 1]
+        )
+
+        for i, ag in enumerate(agents):
+            ag_hist = np.asarray(ag.history)
+
+            pos = ag_hist[frame, :2]
+            vel = ag_hist[frame, 2:4]
+
+            follower_plots[i].set_data(
+                [pos[0]],
+                [pos[1]]
+            )
+
+            follower_trajs[i].set_data(
+                ag_hist[:frame + 1, 0],
+                ag_hist[:frame + 1, 1]
+            )
+
+            safety_circles[i].center = (pos[0], pos[1])
+
+            # Direction arrow
+            if arrow_mode == "velocity":
+                direction = vel
+
+            elif arrow_mode == "target":
+                f_i = np.asarray(ag.f, dtype=float).reshape(-1)[:2]
+                target_pos = leader_pos + f_i
+                direction = target_pos - pos
+
+            else:
+                direction = np.zeros(2)
+
+            norm_dir = np.linalg.norm(direction)
+
+            if norm_dir > 1e-6:
+                direction = direction / norm_dir
+            else:
+                direction = np.zeros(2)
+
+            direction_arrows[i].set_offsets([pos])
+            direction_arrows[i].set_UVC(
+                arrow_length * direction[0],
+                arrow_length * direction[1]
+            )
+
+        return (
+            follower_plots
+            + follower_trajs
+            + safety_circles
+            + direction_arrows
+            + obstacle_patches
+            + [leader_plot, leader_traj]
+        )
+
+    ani = animation.FuncAnimation(
+        fig,
+        update,
+        frames=num_frames,
+        interval=dt * 1000,
+        blit=True
+    )
 
     print(f"Generating {filename}...")
-    # Using 30 FPS or 1/dt for smooth playback
-    ani.save(filename, writer='ffmpeg', fps=int(1/dt))
+
+    ani.save(
+        filename,
+        writer='ffmpeg',
+        fps=int(1 / dt)
+    )
+
     plt.close(fig)
+
     print("Video generation complete.")
