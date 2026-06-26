@@ -208,7 +208,7 @@ class DecentralizedCBF():
             if u_safe_i is None:
                 raise ValueError("u_hat_i must be provided for Type 1 deadlock handling.")
 
-            u_hat = np.asarray(u_safe_i, dtype=float).reshape(2,)
+            u_hat = np.asarray(u_nom_i, dtype=float).reshape(2,)
 
             # If nominal direction is nearly zero, fallback to no asymmetry
             if np.linalg.norm(u_hat) > cross_tol:
@@ -232,7 +232,7 @@ class DecentralizedCBF():
 
         if sol is not None:
             return sol[0:2].reshape(2, 1)
-
+        
         # fallback
         vel = np.asarray(agent_i.vel, dtype=float).reshape(2,)
         vel_norm = np.linalg.norm(vel)
