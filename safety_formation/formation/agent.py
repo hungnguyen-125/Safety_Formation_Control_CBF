@@ -1,29 +1,20 @@
 import numpy as np
 
+from safety_formation.dynamics import DoubleIntegrator2D
+
+
 class Agent:
     """
     Agent class representing an individual entity in a Multi-Agent System.
-    The dynamics follow a Double Integrator model: x_dot = A x + B u.
+
+    By default, the dynamics follow a double-integrator model:
+    x_dot = A x + B u.
     """
 
-    # System matrices A and B (class attributes shared by all agents)
-    # State vector: x = [x, y, vx, vy]^T (4x1)
-    # Control input: u = [ax, ay]^T (2x1)
-    A = np.array([
-        [0, 0, 1, 0],
-        [0, 0, 0, 1],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0]
-    ], dtype=float)
+    A = DoubleIntegrator2D.A
+    B = DoubleIntegrator2D.B
 
-    B = np.array([
-        [0, 0],
-        [0, 0],
-        [1, 0],
-        [0, 1]
-    ], dtype=float)
-
-    def __init__(self, agent_id, x0, f_target, alpha = 10, beta = 10):
+    def __init__(self, agent_id, x0, f_target, alpha=10, beta=10, dynamics=None):
         """
         Initialize an Agent.
 
@@ -37,10 +28,11 @@ class Agent:
             Desired relative formation offset [fx, fy, 0, 0].
         """
         self.id = agent_id
+        self.dynamics = dynamics if dynamics is not None else DoubleIntegrator2D()
 
-        # Ensure state and formation offset are column vectors (4,1)
-        self.state = np.array(x0, dtype=float).reshape(4, 1)
-        self.f = np.array(f_target, dtype=float).reshape(4, 1)
+        # Ensure state and formation offset are column vectors.
+        self.state = np.array(x0, dtype=float).reshape(self.dynamics.state_dim, 1)
+        self.f = np.array(f_target, dtype=float).reshape(self.dynamics.state_dim, 1)
 
         self.alpha = alpha
         self.beta = beta
@@ -55,14 +47,7 @@ class Agent:
         x(t+1) = x(t) + x_dot * dt
         x(t+1) = x(t) + (A x(t) + B u(t)) dt
         """
-        # Ensure control input is a column vector (2,1)
-        u_input = np.array(u, dtype=float).reshape(2, 1)
-
-        # Compute state derivative
-        x_dot = self.A @ self.state + self.B @ u_input
-
-        # Update state
-        self.state = self.state + x_dot * dt
+        self.state = self.dynamics.step(self.state, u, dt)
 
         # Save updated state to history
         self.save_history()
@@ -77,12 +62,12 @@ class Agent:
     @property
     def pos(self):
         """Return current position vector [x, y]^T (2x1)."""
-        return self.state[0:2]
+        return self.dynamics.position(self.state)
 
     @property
     def vel(self):
         """Return current velocity vector [vx, vy]^T (2x1)."""
-        return self.state[2:4]
+        return self.dynamics.velocity(self.state)
 
     def get_full_history(self):
         """Convert history list to numpy array for convenient slicing."""

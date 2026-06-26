@@ -72,7 +72,7 @@ class Topology:
         """
         Check whether the given agent has direct access to the leader.
         """
-        return self.D_lead[agent_id - 1, agent_id - 1] > 0
+        return bool(self.D_lead[agent_id - 1, agent_id - 1] > 0)
     
     def __repr__(self):
         return f"Topology(n={self.n}, Leader_Linked={np.any(self.D_lead)})"
