@@ -3,7 +3,7 @@ import matplotlib
 matplotlib.use("TkAgg")   # hoặc "Qt5Agg"
 import matplotlib.pyplot as plt
 
-from safety_formation.control_law.cbf import CentralizedCBF
+from safety_formation.controllers.cbf import CentralizedCBF
 
 def main():
     # --- Cấu hình mô phỏng ---

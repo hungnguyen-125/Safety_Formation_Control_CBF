@@ -248,7 +248,7 @@ refactor: introduce agent team abstraction
 
 ## Phase 4: Reorganize Controllers
 
-Current package:
+Previous package:
 
 ```text
 safety_formation/control_law/
@@ -276,7 +276,7 @@ Nominal controllers compute desired formation behavior.
 CBF controllers or filters modify nominal control to enforce safety.
 ```
 
-Temporary compatibility imports should remain in `control_law/` until notebooks and tests are migrated.
+The temporary `control_law/` compatibility package was removed after notebooks and tests were migrated to `controllers/`.
 
 Suggested commit:
 
@@ -462,7 +462,7 @@ Compatibility policy:
 Example old import to preserve temporarily:
 
 ```python
-from safety_formation.control_law.cbf.decentralized_cbf import DecentralizedCBF
+from safety_formation.controllers.cbf import DecentralizedCBF
 ```
 
 Eventually migrate to:
@@ -532,4 +532,3 @@ The following rules must always be respected:
    Execute existing tests and simulations to verify that the refactor has not changed numerical behavior.
 
 When unsure whether a change is architectural or mathematical, assume it is mathematical and ask for clarification instead of modifying it.
-

@@ -11,6 +11,11 @@
 *.sln.docstates
 *.env
 
+# Python cache/test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
