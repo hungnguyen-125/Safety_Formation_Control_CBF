@@ -490,11 +490,46 @@ git commit -m "<phase commit message>"
 
 Use small commits. If a phase becomes too large, split it.
 
-## Recommended First Step
+## Refactoring Safety Rules
 
-Start with only:
+The primary objective of this refactor is to improve software architecture while preserving the existing mathematical behavior.
 
-1. Phase 1: add architecture skeleton
-2. Phase 2: extract dynamics while preserving current behavior
+Unless explicitly requested, the agent must **never** modify the mathematical formulation of the algorithms.
 
-Do not migrate notebooks or rewrite CBF internals until the dynamics and package boundaries are stable.
+This includes, but is not limited to:
+
+* system dynamics
+* state definitions
+* control laws
+* CBF formulations
+* optimization problems
+* Lyapunov functions
+* event-triggering conditions
+* numerical parameters
+* simulation semantics
+
+The following rules must always be respected:
+
+1. **Refactor structure before behavior.**
+   Improve package organization, interfaces, and code readability without changing algorithmic behavior.
+
+2. **Preserve numerical behavior.**
+   Given identical initial conditions and parameters, the refactored implementation should produce equivalent simulation results up to normal floating-point tolerance.
+
+3. **Do not rewrite mathematical logic unless explicitly requested.**
+   Never replace equations, redesign controllers, simplify optimization problems, or modify theoretical formulations unless the user explicitly asks for algorithmic changes.
+
+4. **Preserve public APIs whenever possible.**
+   Existing notebooks, demos, and scripts should continue to work during the migration.
+
+5. **Use compatibility layers during migration.**
+   If modules are relocated, maintain temporary compatibility imports until all code has been migrated.
+
+6. **Refactor incrementally.**
+   Each phase should remain runnable and independently testable.
+
+7. **Run validation after every phase.**
+   Execute existing tests and simulations to verify that the refactor has not changed numerical behavior.
+
+When unsure whether a change is architectural or mathematical, assume it is mathematical and ask for clarification instead of modifying it.
+
