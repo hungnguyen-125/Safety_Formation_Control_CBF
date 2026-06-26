@@ -1,5 +1,6 @@
 import numpy as np
-from qpsolvers import solve_qp
+
+from .qp_solver import solve_cbf_qp
 
 class BaseCBF:
     def __init__(self, nominal_controller, safety_dist=0.5):
@@ -38,7 +39,7 @@ class BaseCBF:
             return u_nom
 
         # Giải QP
-        u_opt = solve_qp(P, q, G, h_vec, solver="cvxopt")
+        u_opt = solve_cbf_qp(P, q, G, h_vec, solver="cvxopt")
         
         if u_opt is None:
             print(f"Warning: QP Infeasible for agent {agent_id}, using u_nom")
