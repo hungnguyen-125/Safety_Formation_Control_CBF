@@ -1,4 +1,6 @@
-from .distributed_formation import DistributedFormationControl
-from .centralized_formation import CentralizedFormationControl
+from safety_formation.controllers.nominal import (
+    CentralizedFormationControl,
+    DistributedFormationControl,
+)
 
-# Sau này có LQR hay MPC thì thêm vào đây
+__all__ = ["CentralizedFormationControl", "DistributedFormationControl"]
