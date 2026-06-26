@@ -1,6 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import networkx as nx
 
 
 class CBFTopology:
@@ -99,41 +97,6 @@ class CBFTopology:
         Plot current dynamic topology using actual agent positions.
         Directed edges are shown as undirected for simplicity.
         """
-        if ax is None:
-            _, ax = plt.subplots(figsize=(7, 7))
+        from safety_formation.visualization import plot_cbf_topology
 
-        G = nx.Graph()
-        pos_dict = {}
-
-        for i, ag in enumerate(self.agent_list):
-            node_id = i + 1
-            G.add_node(node_id)
-            p = ag.pos.flatten()
-            pos_dict[node_id] = (p[0], p[1])
-
-        for i in range(self.n):
-            for j in range(i + 1, self.n):
-                if self.adj_matrix[i, j] > 0 or self.adj_matrix[j, i] > 0:
-                    G.add_edge(i + 1, j + 1)
-
-        nx.draw_networkx_nodes(
-            G, pos_dict,
-            node_color="skyblue",
-            node_size=700,
-            edgecolors="k",
-            ax=ax
-        )
-        nx.draw_networkx_labels(G, pos_dict, font_size=11, ax=ax)
-        nx.draw_networkx_edges(G, pos_dict, width=2, ax=ax)
-
-        if show_radius:
-            for i, ag in enumerate(self.agent_list):
-                p = ag.pos.flatten()
-                r = self.neighborhood_radii[i]
-                c = plt.Circle((p[0], p[1]), r, fill=False, linestyle="--", alpha=0.35)
-                ax.add_patch(c)
-
-        ax.set_title("CBF Dynamic Neighborhood Topology")
-        ax.set_aspect("equal")
-        ax.grid(True)
-        return ax
+        return plot_cbf_topology(self, ax=ax, show_radius=show_radius)
