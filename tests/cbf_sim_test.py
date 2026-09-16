@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib
-matplotlib.use("TkAgg")   # hoặc "Qt5Agg"
+matplotlib.use("TkAgg")   # or "Qt5Agg"
 import matplotlib.pyplot as plt
 
 from safety_formation.controllers.cbf import CentralizedCBF

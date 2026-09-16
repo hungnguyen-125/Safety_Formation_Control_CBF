@@ -12,7 +12,7 @@ def plot_formation_error(norms, dt, title=r"Formation error $\|\delta_i\|$", cap
     T, N = norms.shape
     t = np.arange(T) * dt
 
-    plt.figure(figsize=(8.6, 4.6))  # gần giống paper
+    plt.figure(figsize=(8.6, 4.6))  
     for i in range(N):
         plt.plot(t, norms[:, i], linewidth=2, label=f"agent {i+1}")
 
