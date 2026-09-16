@@ -75,6 +75,9 @@ class DecentralizedCBF():
         sqrt_cK = np.sqrt(cK)
         cross_tol = 1e-9
 
+        k_gamma_left = 1.2
+        k_gamma_right = 0.8
+
         # Check neighbor
         valid_neighbors = [j for j in neighbor_list if j != agent_id]
 
@@ -170,11 +173,11 @@ class DecentralizedCBF():
                     # If neighbor is on the right: compress
                     if cross_val < 0.0:
                         lb[idx] = 0.0
-                        ub[idx] = sqrt_cK
+                        ub[idx] = k_gamma_right
 
                     # If neighbor is on the left: relax
                     else:
-                        lb[idx] = sqrt_cK
+                        lb[idx] = k_gamma_left
 
         sol = solve_cbf_qp(P, q, G, h, lb=lb, ub=ub, solver="quadprog")
 
@@ -276,11 +279,8 @@ def count_active_constraints(u, A, b, tol=1e-3):
     if u is None:
         return 0
 
-    ui = u.flatten()
-    active = 0
+    ui = np.asarray(u, dtype=float).reshape(-1)
 
-    for i in range(A.shape[0]):
-        if abs(A[i] @ ui - b[i]) <= tol:
-            active += 1
+    slack = b - A @ ui
 
-    return active
+    return int(np.sum((slack >= -tol) & (slack <= tol)))

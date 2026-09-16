@@ -25,7 +25,7 @@ def plot_formation_error(norms, dt, title=r"Formation error $\|\delta_i\|$", cap
     plt.title(title)
 
     if caption is not None:
-        # caption kiểu paper (tuỳ bạn có muốn)
+        # Optional paper-style caption
         plt.figtext(0.5, -0.05, caption, ha="center", fontsize=12)
 
     plt.tight_layout()

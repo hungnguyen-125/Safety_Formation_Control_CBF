@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from safety_formation.controllers.cbf import CentralizedCBF
 
 def main():
-    # --- Cấu hình mô phỏng ---
+    # --- Simulation configuration ---
     N = 3
     R_circle = 150
     dt = 0.1
@@ -15,7 +15,7 @@ def main():
     d_min = 9.0
     k1, k2 = 1.0, 2.0
 
-    # --- Khởi tạo trạng thái ---
+    # --- Initialize states ---
     agents_list = []
 
     class AgentObj:
@@ -53,11 +53,11 @@ def main():
     ax.grid(True)
     ax.set_title("Robot Position Swapping with Centralized CBF (Realtime)")
 
-    # Vẽ target
+    # Plot targets
     for ag in agents_list:
         ax.scatter(ag.target[0], ag.target[1], marker="x", color="red")
 
-    # Artist cho agent + trail
+    # Artists for agents and trails
     points = [ax.plot([], [], "o")[0] for _ in range(N)]
     trails = [ax.plot([], [], alpha=0.3)[0] for _ in range(N)]
     history = [[] for _ in range(N)]
@@ -65,14 +65,14 @@ def main():
     # Text realtime
     info_text = ax.text(0.02, 0.98, "", transform=ax.transAxes, va="top")
 
-    # Vẽ frame đầu tiên để “show”
+    # Draw the first frame for display
     fig.canvas.draw()
     fig.canvas.flush_events()
 
-    # --- Vòng lặp mô phỏng ---
+    # --- Simulation loop ---
     for step in range(int(T_max / dt)):
 
-        # Nếu user đóng cửa sổ thì dừng loop (tránh treo)
+        # Stop the loop if the user closes the window to prevent hanging
         if not plt.fignum_exists(fig.number):
             break
 

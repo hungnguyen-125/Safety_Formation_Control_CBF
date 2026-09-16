@@ -12,20 +12,26 @@ class DeadlockManager:
         self.lp_tol = lp_tol
 
     def is_deadlocked(self, u_safe_i, u_nom_i, v_i):
-        """
-        Deadlock definition from the paper:
-        deadlock if u_i = 0, v_i = 0, and u_nom_i != 0
-        """
         if u_safe_i is None or u_nom_i is None or v_i is None:
             return False
 
-        u_safe_norm = np.linalg.norm(np.asarray(u_safe_i).reshape(-1))
-        uhat_norm = np.linalg.norm(np.asarray(u_nom_i).reshape(-1))
-        v_norm = np.linalg.norm(np.asarray(v_i).reshape(-1))
+        u_safe_norm = np.linalg.norm(
+            np.asarray(u_safe_i).reshape(-1)
+        )
+        u_nom_norm = np.linalg.norm(
+            np.asarray(u_nom_i).reshape(-1)
+        )
+        v_norm = np.linalg.norm(
+            np.asarray(v_i).reshape(-1)
+        )
 
-        return (u_safe_norm <= self.zero_tol) and (v_norm <= 1) and (uhat_norm > self.zero_tol)
+        return (
+            u_safe_norm <= self.zero_tol
+            and v_norm <= self.zero_tol
+            and u_nom_norm > self.zero_tol
+        )
 
-    def compute_delta_lp(self, A, b):
+    def compute_delta_lp(self, A, b, alpha):
         """
         Solve:
             min delta
@@ -50,8 +56,8 @@ class DeadlockManager:
         b_ub = b.copy()
 
         bounds = [
-            (None, None),  # u_x
-            (None, None),  # u_y
+            (-alpha, alpha),  # u_x
+            (-alpha, alpha),  # u_y
             (None, None),  # delta
         ]
 
@@ -68,7 +74,7 @@ class DeadlockManager:
 
         return float(res.x[2])
 
-    def classify_deadlock(self, u_i, u_nom_i, v_i, A, b, n_active_constraints):
+    def classify_deadlock(self, u_i, u_nom_i, v_i, delta_lp, n_active_constraints):
         """
         Returns:
             None      -> not in deadlock
@@ -78,14 +84,14 @@ class DeadlockManager:
         """
         if not self.is_deadlocked(u_i, u_nom_i, v_i):
             return None
-
-        delta_lp = self.compute_delta_lp(A, b)
-
-        # Following the paper logic:
+        
         # feasible QP region if delta_lp <= 0
         # type 3 if delta_lp >= 0 (or numerically close)
-        if delta_lp >= -self.lp_tol:
+        if delta_lp > -self.lp_tol:
             return "type3"
+
+        if abs(delta_lp) <= self.lp_tol:
+            return "degenerate"
 
         # feasible and deadlocked:
         # vertex => type 1
@@ -123,12 +129,34 @@ class DeadlockManager:
             u_i=u_safe_i
         )
 
+        delta_lp = self.compute_delta_lp(
+        A,
+        b,
+        alpha=agent_i.alpha
+        )
+
+        if self.is_deadlocked(
+            u_safe_i,
+            u_nom_i,
+            agent_i.vel
+        ):
+            print("=== DEADLOCK CANDIDATE ===")
+            print("agent:", agent_id)
+            print("||u_safe||:", np.linalg.norm(u_safe_i))
+            print("||u_nom||:", np.linalg.norm(u_nom_i))
+            print("||v||:", np.linalg.norm(agent_i.vel))
+            print("A.shape:", A.shape)
+            print("n_active:", n_active)
+            print("delta_lp:", delta_lp)
+            print("A:\n", A)
+            print("b:\n", b)
+            print()
+
         d_type = self.classify_deadlock(
             u_i=u_safe_i,
             u_nom_i=u_nom_i,
             v_i=agent_i.vel,
-            A=A,
-            b=b,
+            delta_lp = delta_lp,
             n_active_constraints=n_active
         )
 
