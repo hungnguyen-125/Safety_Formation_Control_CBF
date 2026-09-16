@@ -552,7 +552,7 @@ def plot_minimum_safety_distance(
         # )
 
     plt.ylim(0.2, 2)
-    plt.xlabel("Time [s]")
+    plt.xlabel("Time (s)")
     plt.ylabel("Distance")
     plt.title(title)
     plt.grid(True, alpha=0.3)
