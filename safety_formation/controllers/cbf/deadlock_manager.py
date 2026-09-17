@@ -11,6 +11,14 @@ class DeadlockManager:
         self.zero_tol = zero_tol
         self.lp_tol = lp_tol
 
+        # Persistent turning direction for each agent.
+        #
+        # +1 : use R_ccw @ u_nom
+        # -1 : use -(R_ccw @ u_nom)
+        #
+        # Type 1 decides this sign, Type 2 reuses it.
+        self.turn_sign = {}
+
     def is_deadlocked(self, u_safe_i, u_nom_i, v_i):
         if u_safe_i is None or u_nom_i is None or v_i is None:
             return False
@@ -105,6 +113,61 @@ class DeadlockManager:
         # treat as type2 rather than fail hard
         return "type2"
 
+    def compute_type2_safe_control(
+        self,
+        cbf_solver,
+        agent_i,
+        agent_id,
+        all_agents,
+        neighbor_list,
+        u_nom_i,
+        k_delta=0.2,
+        debug=False,
+        ):
+        u_nom = np.asarray(u_nom_i, dtype=float).reshape(2,)
+
+        if np.linalg.norm(u_nom) < 1e-9:
+            return np.zeros((2, 1))
+
+        R_ccw = np.array([
+            [0.0, -1.0],
+            [1.0, 0.0]
+        ])
+
+        turn_sign = self.turn_sign.get(
+            agent_id,
+            1.0
+        )
+
+        delta_perp = turn_sign * k_delta * (R_ccw @ u_nom)
+
+        u_nom_pert = u_nom + delta_perp
+
+        if debug:
+            print("\n=== TYPE 2 DEADLOCK DEBUG ===")
+            print("agent:", agent_id)
+            print("u_nom:", u_nom)
+            print("||u_nom||:", np.linalg.norm(u_nom))
+            print("delta_perp:", delta_perp)
+            print("u_nom_pert:", u_nom_pert)
+
+        u_safe = cbf_solver.compute_relax_safe_control(
+            agent_i=agent_i,
+            agent_id=agent_id,
+            all_agents=all_agents,
+            neighbor_list=neighbor_list,
+            u_nom_i=u_nom_pert.reshape(2, 1),
+            deadlock=None,
+            u_safe_i=None,
+            debug = True,
+        )
+
+        if debug:
+            print("u_safe after type2:", u_safe.reshape(-1))
+            print("||u_safe||:", np.linalg.norm(u_safe))
+
+        return u_safe
+
     def resolve_deadlock(
         self,
         cbf_solver,
@@ -114,6 +177,7 @@ class DeadlockManager:
         neighbor_list,
         u_nom_i,
         u_safe_i,
+        debug_type2=False
     ):
         """
         Main wrapper.
@@ -135,22 +199,22 @@ class DeadlockManager:
         alpha=agent_i.alpha
         )
 
-        if self.is_deadlocked(
-            u_safe_i,
-            u_nom_i,
-            agent_i.vel
-        ):
-            print("=== DEADLOCK CANDIDATE ===")
-            print("agent:", agent_id)
-            print("||u_safe||:", np.linalg.norm(u_safe_i))
-            print("||u_nom||:", np.linalg.norm(u_nom_i))
-            print("||v||:", np.linalg.norm(agent_i.vel))
-            print("A.shape:", A.shape)
-            print("n_active:", n_active)
-            print("delta_lp:", delta_lp)
-            print("A:\n", A)
-            print("b:\n", b)
-            print()
+        # if self.is_deadlocked(
+        #     u_safe_i,
+        #     u_nom_i,
+        #     agent_i.vel
+        # ):
+        #     print("=== DEADLOCK CANDIDATE ===")
+        #     print("agent:", agent_id)
+        #     print("||u_safe||:", np.linalg.norm(u_safe_i))
+        #     print("||u_nom||:", np.linalg.norm(u_nom_i))
+        #     print("||v||:", np.linalg.norm(agent_i.vel))
+        #     print("A.shape:", A.shape)
+        #     print("n_active:", n_active)
+        #     print("delta_lp:", delta_lp)
+        #     print("A:\n", A)
+        #     print("b:\n", b)
+        #     print()
 
         d_type = self.classify_deadlock(
             u_i=u_safe_i,
@@ -173,13 +237,67 @@ class DeadlockManager:
                 u_nom_i=u_nom_i,
                 u_safe_i = u_safe_i
             )
+
+            R_ccw = np.array([
+                [0.0, -1.0],
+                [1.0,  0.0]
+            ])
+
+            u_nom = np.asarray( u_nom_i, dtype=float).reshape(2,)
+
+            u_old = np.asarray( u_safe_i, dtype=float).reshape(2,)
+
+            u_new_vec = np.asarray( u_new, dtype=float).reshape(2,)
+
+            # Direction introduced by Type 1
+            delta_u = ( u_new_vec - u_old)
+
+            # Reference CCW direction
+            perp_ccw = (R_ccw @ u_nom)
+
+            dot_val = np.dot( delta_u, perp_ccw)
+
+            if dot_val > 0:
+                turn_sign = 1.0
+
+            elif dot_val < 0:
+                turn_sign = -1.0
+
+            else:
+                # Exact zero only in pathological/numerical case.
+                # Preserve previous direction if available.
+                turn_sign = self.turn_sign.get(
+                    agent_id,
+                    1.0
+                )
+
+            # Store it persistently
+            self.turn_sign[
+                agent_id
+            ] = turn_sign
+
+            self.turn_sign[agent_id] = turn_sign
+
             return u_new, "type1"
         
         elif d_type == "type2":
-            # Placeholder:
-            # later replace by your perpendicular perturbation solver
-            # for now, return original control
-            return u_safe_i, "type2"
+            u_new = self.compute_type2_safe_control(
+            agent_i=agent_i,
+            cbf_solver = cbf_solver,
+            agent_id=agent_id,
+            all_agents=all_agents,
+            neighbor_list=neighbor_list,
+            u_nom_i=u_nom_i,
+            k_delta=0.7,
+            debug=debug_type2
+            )
+            
+            print(
+                "TYPE2 CHANGE:",
+                "old =", np.asarray(u_safe_i).reshape(-1),
+                "new =", np.asarray(u_new).reshape(-1),
+            )
+            return u_new, "type2"
 
         else:  # type3
             return u_safe_i, "type3"
