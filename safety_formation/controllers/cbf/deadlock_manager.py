@@ -121,7 +121,7 @@ class DeadlockManager:
         all_agents,
         neighbor_list,
         u_nom_i,
-        k_delta=0.2,
+        k_delta=0.7,
         debug=False,
         ):
         u_nom = np.asarray(u_nom_i, dtype=float).reshape(2,)
@@ -134,10 +134,7 @@ class DeadlockManager:
             [1.0, 0.0]
         ])
 
-        turn_sign = self.turn_sign.get(
-            agent_id,
-            1.0
-        )
+        turn_sign = self.turn_sign.get(agent_id, 1.0)
 
         delta_perp = turn_sign * k_delta * (R_ccw @ u_nom)
 
@@ -159,7 +156,7 @@ class DeadlockManager:
             u_nom_i=u_nom_pert.reshape(2, 1),
             deadlock=None,
             u_safe_i=None,
-            debug = True,
+            debug = debug,
         )
 
         if debug:
@@ -272,9 +269,6 @@ class DeadlockManager:
                 )
 
             # Store it persistently
-            self.turn_sign[
-                agent_id
-            ] = turn_sign
 
             self.turn_sign[agent_id] = turn_sign
 
