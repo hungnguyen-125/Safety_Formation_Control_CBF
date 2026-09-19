@@ -134,6 +134,78 @@ def build_decentralized_constraints(agent_i, agent_id, all_agents, neighbor_list
     return np.array(G_list), np.array(h_list).flatten()
 
 
+def build_centralized_hocbf_constraints(all_agents, topology, d_min, k1_hocbf, k2_hocbf, obstacles=None):
+    N = len(all_agents)
+    G_list = []
+    h_list = []
+
+    for i in range(N):
+        for j in range(i + 1, N):
+            if topology.adj_matrix[i, j] > 0 or topology.adj_matrix[j, i] > 0:
+                agent_i = all_agents[i]
+                agent_j = all_agents[j]
+
+                dp = (agent_i.pos - agent_j.pos).flatten()
+                dv = (agent_i.vel - agent_j.vel).flatten()
+
+                h_ij = np.dot(dp, dp) - d_min**2
+                h_dot_ij = 2.0 * np.dot(dp, dv)
+
+                row_G = np.zeros(2 * N)
+                row_G[2 * i: 2 * i + 2] = -2.0 * dp
+                row_G[2 * j: 2 * j + 2] = 2.0 * dp
+
+                term_v_norm = 2.0 * np.linalg.norm(dv) ** 2
+                term_h_dot = (k1_hocbf + k2_hocbf) * h_dot_ij
+                term_h = k1_hocbf * k2_hocbf * h_ij
+
+                b_ij = term_v_norm + term_h_dot + term_h
+                val_b = float(b_ij)
+
+                if not np.isfinite(val_b):
+                    val_b = -1e6
+
+                G_list.append(row_G)
+                h_list.append(val_b)
+
+    if obstacles is not None:
+        for i, agent_i in enumerate(all_agents):
+            p_i = np.asarray(agent_i.pos, dtype=float).reshape(-1)[:2]
+            v_i = np.asarray(agent_i.vel, dtype=float).reshape(-1)[:2]
+
+            for obs in obstacles:
+                p_o = np.asarray(obs["center"], dtype=float).reshape(-1)[:2]
+                r_o = float(obs["radius"])
+
+                d_obs_safe = r_o + d_min
+
+                dp = p_i - p_o
+                dv = v_i
+
+                h_io = np.dot(dp, dp) - d_obs_safe**2
+                h_dot_io = 2.0 * np.dot(dp, dv)
+
+                row_G = np.zeros(2 * N)
+                row_G[2 * i: 2 * i + 2] = -2.0 * dp
+
+                term_v_norm = 2.0 * np.linalg.norm(dv) ** 2
+                term_h_dot = (k1_hocbf + k2_hocbf) * h_dot_io
+                term_h = k1_hocbf * k2_hocbf * h_io
+
+                b_io = term_v_norm + term_h_dot + term_h
+                val_b = float(b_io)
+
+                if not np.isfinite(val_b):
+                    val_b = -1e6
+
+                G_list.append(row_G)
+                h_list.append(val_b)
+
+    append_centralized_actuator_limits(G_list, h_list, all_agents)
+
+    return np.array(G_list), np.array(h_list).flatten()
+
+
 def append_centralized_actuator_limits(G_list, h_list, all_agents):
     N = len(all_agents)
 
