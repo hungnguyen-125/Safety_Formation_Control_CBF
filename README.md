@@ -201,7 +201,7 @@ and differentiates it recursively until the control input appears. Therefore, al
 </p>
 
 <p align="center">
-  <b>Centralized CBF</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <b>Centralized CBF</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp
   <b>Centralized HOCBF</b>
 </p>
 
@@ -223,7 +223,7 @@ The RDCBF controller enables decentralized collision avoidance during the positi
 The RDCBF controller is further evaluated in a formation-control scenario with static obstacles. The agents maintain collision avoidance with both neighboring agents and obstacles while converging toward the desired formation.
 
 <p align="center">
-  <img src="docs/figures/formation_with_obstacle_and_disturbance.gif" width="600">
+  <img src="docs/figures/formation_with_obstacle_and_disturbance.gif" width="800">
 </p>
 
 ### Useful Result Media
