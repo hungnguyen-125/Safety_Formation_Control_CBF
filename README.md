@@ -57,99 +57,109 @@ p_i_dot = v_i
 v_i_dot = u_i
 ```
 
-where `p_i` is the robot position, `v_i` is the robot velocity, and `u_i` is the
-acceleration control input.
+where `p_i`, `v_i`, and `u_i` denote the robot position, velocity, and acceleration input.
 
-The formation objective is to drive each follower robot toward a desired offset
-from a leader or reference state:
+The nominal controller drives each robot toward its assigned target or formation reference. For formation-control scenarios, the tracking error is defined as:
 
 ```text
 e_i = x_i - f_i - x_L
 ```
 
-where `x_i = [p_x, p_y, v_x, v_y]^T`, `f_i` is the desired formation offset, and
-`x_L` is the leader state.
+where `x_i = [p_x, p_y, v_x, v_y]^T`, `f_i` is the desired formation offset, and `x_L` is the leader or reference state.
 
-The safety objective is to keep every relevant pair of robots separated by at
-least a prescribed safety distance:
+The safety objective is to maintain a prescribed minimum distance between neighboring robots:
 
 ```text
 ||p_i - p_j|| >= d_min
 ```
 
-For obstacle scenarios, the same idea is applied between each robot and circular
-obstacles using an inflated obstacle radius:
+For circular static obstacles, the safety condition is extended using the obstacle radius:
 
 ```text
 ||p_i - p_obs|| >= r_obs + d_min
 ```
 
-## CBF Safety Filter
-## High-Order CBF Safety Filter
+The nominal controller is combined with a safety filter that modifies the control input only when required to satisfy collision-avoidance and actuator constraints.
 
-The centralized CBF filter solves:
+---
+
+## Safety Controllers
+
+### Centralized CBF and HOCBF
+
+The centralized safety controller solves a quadratic program that minimally modifies the nominal control input:
 
 ```text
 minimize    ||u - u_nom||^2
-subject to  G u <= h
-```
 
-where `u_nom` is the nominal formation-control input and `u` is the safe control
-input returned by the filter.
-
-The centralized constraint builder includes:
-
-- Robot-robot safety constraints for connected agents in the topology graph.
-- Robot-obstacle safety constraints for circular obstacles.
-- Actuator bounds based on each agent acceleration limit `alpha`.
-
-The repository also includes a centralized HOCBF implementation. HOCBF is useful
-for double-integrator dynamics because the distance-based safety function has
-relative degree two with respect to acceleration input.
-
-The CBF and HOCBF implementations are validated in the demo notebooks and media
-files, including:
-
-- `demo/media/centralized_cbf_validation.mp4`
-- `demo/media/centralized_hocbf_validation.mp4`
-- `demo/media/centralized_cbf_formation_control.mp4`
-- `demo/media/Formation_with_obstacle_and_disturbance.mp4`
-
-## RDCBF Formulation
-
-The relaxed decentralized CBF (RDCBF) formulation extends the local CBF filter
-by giving each robot its own local QP. Instead of solving one global problem for
-all robots, each robot computes a safe local control using only its neighboring
-robots.
-
-For robot `i`, the local QP minimizes the deviation from its nominal input:
-
-```text
-minimize    ||u_i - u_nom_i||^2
-subject to  local CBF constraints with neighbors j in N_i
+subject to  safety constraints
             actuator limits
 ```
 
-The relaxed version introduces additional relaxation variables that modify the
-effective CBF gain for each neighbor. This allows the controller to handle
-geometrically difficult cases where a strict decentralized CBF may become too
-conservative.
+where `u_nom` is the nominal control input and `u` is the filtered safe input.
 
-The current RDCBF implementation includes the idea of asymmetric relaxation:
+#### Centralized CBF
 
-- Increase the CBF gain for neighbors on one side.
-- Compress or reduce the effective gain for neighbors on the other side.
-- Use the nominal direction to decide which side should be relaxed or compressed.
+The centralized CBF formulation uses a velocity-aware barrier function. Relative velocity is incorporated directly into the safety function, so differentiation introduces the acceleration input into the resulting CBF constraint.
 
-This is intended to create a small preference in the local feasible set so that
-robots can escape symmetric blocking configurations.
+This formulation therefore accounts for both the current inter-agent distance and the relative motion between neighboring robots.
 
-Deadlock resolution is still under development. The current idea is to detect
-when the filtered control is nearly zero while the nominal controller still
-wants to move, classify the deadlock geometry, and then perturb or relax the
-local CBF constraints to recover motion. The implementation in
-`safety_formation/controllers/cbf/deadlock_manager.py` should be considered
-experimental and not yet a final validated contribution.
+#### Centralized HOCBF
+
+The HOCBF formulation starts from a purely position-based barrier:
+
+```text
+h_ij = ||p_i - p_j||^2 - d_min^2
+```
+
+For double-integrator dynamics, this barrier has relative degree two with respect to the acceleration input. The safety condition is therefore constructed recursively until the control input appears.
+
+Although the CBF and HOCBF formulations are derived differently, both ultimately generate constraints involving relative position, relative velocity, and acceleration. In the position-swapping experiments, this results in very similar avoidance behavior when both controllers are tuned close to the safety boundary.
+
+Both centralized formulations support:
+
+- robot-robot collision avoidance;
+- static circular obstacles;
+- actuator limits;
+- centralized optimization over all agents.
+
+---
+
+### Relaxed Decentralized CBF (RDCBF)
+
+The relaxed decentralized CBF formulation replaces the centralized optimization problem with one local QP per robot:
+
+```text
+minimize    ||u_i - u_nom_i||^2
+
+subject to  local CBF constraints
+            actuator limits
+```
+
+Each robot computes its safe control using only information from its local neighbors.
+
+The relaxed formulation introduces additional variables that modify the effective CBF gains associated with neighboring constraints. This provides additional flexibility in configurations where a strict decentralized CBF may become overly restrictive.
+
+A more detailed derivation of the CBF formulation and the original safe-formation-control design is provided in:
+
+[Safe Formation Control M1 Report](docs/report/Safe_Formation_Control_M1_Report.pdf)
+
+An asymmetric relaxation strategy is also considered. Neighboring constraints can be modified differently according to their relative geometry, slightly reshaping the local feasible control set and creating a preferred direction of motion in symmetric blocking configurations.
+
+The current implementation also contains an experimental deadlock-resolution mechanism. A potential deadlock is detected when the safe control becomes close to zero while the nominal controller still requests significant motion.
+
+Two strategies are currently explored:
+
+- asymmetric modification of neighboring CBF gains;
+- perturbation of the nominal control direction.
+
+The implementation can be found in:
+
+```text
+safety_formation/controllers/cbf/deadlock_manager.py
+```
+
+The deadlock-resolution component is still experimental and should not yet be considered a fully validated contribution.
 
 ## Simulation Scenarios
 
@@ -186,8 +196,8 @@ h_{ij} = \|p_i - p_j\|^2 - d_{\min}^2,
 and differentiates it recursively until the control input appears. Therefore, although the two approaches are formulated differently, both ultimately impose safety constraints that depend on relative position, relative velocity, and acceleration. This leads to very similar avoidance behavior when both controllers are tuned close to the safety boundary.
 
 <p align="center">
-  <img src="media/centralized_cbf_position_swap.gif" width="48%">
-  <img src="media/centralized_hocbf_position_swap.gif" width="48%">
+  <img src="docs/figures/centralized_cbf_validation_dynamics_topology.gif" width="48%">
+  <img src="docs/figures/centralized_hocbf_validation.gif" width="48%">
 </p>
 
 <p align="center">
@@ -204,7 +214,7 @@ In this sense, the velocity-aware CBF implicitly incorporates part of the higher
 The RDCBF controller enables decentralized collision avoidance during the position-swapping task while preserving progress toward the agents' individual targets.
 
 <p align="center">
-  <img src="media/rdcbf_position_swap.gif" width="700">
+  <img src="docs/figures/relax_distributed_cbf_validation.gif" width="600">
 </p>
 
 
@@ -213,7 +223,7 @@ The RDCBF controller enables decentralized collision avoidance during the positi
 The RDCBF controller is further evaluated in a formation-control scenario with static obstacles. The agents maintain collision avoidance with both neighboring agents and obstacles while converging toward the desired formation.
 
 <p align="center">
-  <img src="media/rdcbf_formation_obstacles.gif" width="700">
+  <img src="docs/figures/formation_with_obstacle_and_disturbance.gif" width="600">
 </p>
 
 ### Useful Result Media
