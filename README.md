@@ -14,7 +14,7 @@ This repository studies a two-layer control architecture:
   <img
     src="docs/figures/proposed-control-structure.png"
     alt="Proposed Control Structure"
-    style="width: 100%; max-width: 800px; height: auto;"
+    style="width: 80%; max-width: 800px; height: auto;"
   >
 </p>
 
@@ -35,7 +35,7 @@ The second objective is to understand, implement, and compare several Control Ba
 - Relaxed Distributed CBF (RDCBF)
 - Centralized High-Order CBF (HOCBF)
 
-The safety filter solves a quadratic program (QP) that keeps the applied control input as close as possible to the nominal controller while enforcing safety constraints.
+The safety filter solves a QP that keeps the applied control input as close as possible to the nominal controller while enforcing safety constraints.
 
 ## Framework
 
@@ -85,6 +85,7 @@ obstacles using an inflated obstacle radius:
 ```
 
 ## CBF Safety Filter
+## High-Order CBF Safety Filter
 
 The centralized CBF filter solves:
 
@@ -152,43 +153,80 @@ experimental and not yet a final validated contribution.
 
 ## Simulation Scenarios
 
-The repository contains examples and validation assets for several scenarios:
+Two representative scenarios are used to evaluate the safety controllers.
 
-- Basic double-integrator simulation with a custom control policy.
-- Centralized CBF validation for robot collision avoidance.
-- Centralized HOCBF validation for relative-degree-two safety constraints.
-- Centralized formation control with CBF safety filtering.
-- Decentralized CBF validation.
-- Relaxed decentralized CBF validation.
-- Formation control with obstacle avoidance and disturbance injection.
+### 1. Position Swap
 
-Generated videos are stored in `demo/media/`, and exploratory notebooks are in
-`demo/notebooks/`.
+Multiple agents are initially placed uniformly on a circle, with each agent assigned a target on the opposite side. As all agents move toward their targets simultaneously, their nominal trajectories intersect near the center, creating a highly congested region with a high risk of collisions.
+
+This scenario is used to evaluate inter-agent collision avoidance, minimum-distance preservation, and the intervention behavior of the CBF and HOCBF safety filters.
+
+### 2. Formation Control with Static Obstacles
+
+Multiple agents are required to move toward a desired formation while avoiding static obstacles in the workspace. The nominal controller drives the agents toward their assigned formation positions, while the safety filter modifies the control inputs whenever necessary to prevent collisions.
+
+This scenario evaluates both inter-agent and agent-obstacle safety constraints while preserving the formation objective.
 
 ## Results
 
-The current results show that the CBF safety filter can modify nominal formation
-commands while preserving collision avoidance constraints. In the centralized
-CBF and HOCBF validation scenarios, robots are able to move toward their goals
-or formation targets while maintaining the required minimum separation.
+### 1. Centralized CBF and HOCBF
 
-The obstacle and disturbance scenario demonstrates that the same safety-filter
-structure can include circular obstacles and external control disturbances. The
-filter still projects the nominal command back into the safe set when constraints
-become active.
+#### Position Swapping
 
-The decentralized and relaxed decentralized experiments show the direction of
-the ongoing work: moving from a global QP to local robot-level QPs while keeping
-the controller scalable. RDCBF is promising for reducing conservatism, but the
-deadlock-resolution part is still a work in progress.
+Both the centralized CBF and HOCBF controllers are evaluated on the same position-swapping scenario. In both cases, the safety filter modifies the nominal control inputs to maintain the prescribed minimum inter-agent distance while allowing the agents to progress toward their targets.
 
-Useful result media:
+Despite being derived from different formulations, the two controllers exhibit very similar behavior in this experiment. The conventional CBF used here is constructed from a safety function that already incorporates the relative velocity between agents. Consequently, after differentiating the barrier function, the control input appears explicitly in the resulting constraint.
 
-- `demo/media/formation_control.mp4`
-- `demo/media/centralized_cbf_validation.mp4`
-- `demo/media/decentralized_cbf_validation.mp4`
-- `demo/media/relax_decentralized_cbf_validation.mp4`
-- `demo/media/Formation_with_obstacle_and_disturbance.mp4`
+The HOCBF formulation instead starts from a purely position-based safety function,
+
+\[
+h_{ij} = \|p_i - p_j\|^2 - d_{\min}^2,
+\]
+
+and differentiates it recursively until the control input appears. Therefore, although the two approaches are formulated differently, both ultimately impose safety constraints that depend on relative position, relative velocity, and acceleration. This leads to very similar avoidance behavior when both controllers are tuned close to the safety boundary.
+
+<p align="center">
+  <img src="media/centralized_cbf_position_swap.gif" width="48%">
+  <img src="media/centralized_hocbf_position_swap.gif" width="48%">
+</p>
+
+<p align="center">
+  <b>Centralized CBF</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <b>Centralized HOCBF</b>
+</p>
+
+In this sense, the velocity-aware CBF implicitly incorporates part of the higher-order system dynamics directly into the barrier definition, whereas the HOCBF captures the same dynamics through successive derivatives of a position-based barrier.
+
+### 3. Relaxed Decentralized CBF (RDCBF)
+
+#### Position Swapping
+
+The RDCBF controller enables decentralized collision avoidance during the position-swapping task while preserving progress toward the agents' individual targets.
+
+<p align="center">
+  <img src="media/rdcbf_position_swap.gif" width="700">
+</p>
+
+
+#### Formation Control with Static Obstacles
+
+The RDCBF controller is further evaluated in a formation-control scenario with static obstacles. The agents maintain collision avoidance with both neighboring agents and obstacles while converging toward the desired formation.
+
+<p align="center">
+  <img src="media/rdcbf_formation_obstacles.gif" width="700">
+</p>
+
+### Useful Result Media
+
+| Video | Description |
+|---|---|
+| [Centralized CBF Formation Control](./media/centralized_cbf_formation_control.mp4) | Centralized CBF applied to formation control. |
+| [Centralized CBF with Dynamic Topology](./media/centralized_cbf_validation_dynamics_topology.mp4) | Validation of the centralized CBF with dynamic topology. |
+| [Centralized HOCBF](./media/centralized_hocbf_validation.mp4) | Validation of the centralized HOCBF controller. |
+| [Distributed CBF](./media/distributed_cbf_validation.mp4) | Validation of the distributed CBF formulation. |
+| [Formation with Obstacles and Disturbance](./media/formation_with_obstacle_and_disturbance.mp4) | Formation control with static obstacles and disturbances. |
+| [Nominal Formation Controller](./media/nominal_formation_controller.mp4) | Baseline formation control without a safety filter. |
+| [Relaxed Distributed CBF](./media/relax_distributed_cbf_validation.mp4) | Validation of the relaxed distributed CBF formulation. |
 
 ## Potential Directions
 
