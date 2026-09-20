@@ -190,6 +190,7 @@ This scenario is used to evaluate inter-agent collision avoidance, minimum-dista
 Multiple agents are required to move toward a desired formation while avoiding static obstacles in the workspace. The nominal controller drives the agents toward their assigned formation positions, while the safety filter modifies the control inputs whenever necessary to prevent collisions.
 
 This scenario evaluates both inter-agent and agent-obstacle safety constraints while preserving the formation objective.
+
 ---
 ## Selected Results
 
@@ -293,5 +294,3 @@ Several extensions of the current framework are of interest:
 
 [4] W. Xiao and C. Belta, “High-order control barrier functions,” *IEEE Trans. Autom. Control*, vol. 67, no. 7, pp. 3655–3662, Jul. 2022, doi: 10.1109/TAC.2021.3105491.
 
-Key implementation dependencies include `numpy`, `scipy`, `matplotlib`,
-`networkx`, `cvxpy`, `qpsolvers`, `cvxopt`, and `quadprog`.
