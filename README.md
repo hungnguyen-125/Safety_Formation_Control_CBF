@@ -1,34 +1,52 @@
 # Safe Formation Control for Multi-Robot Systems
 
-This repository implements and validates safety-critical formation control for
-multi-robot systems using Control Barrier Functions (CBFs). The project combines
-nominal formation controllers with quadratic-programming safety filters so that
-robots can track a desired formation while respecting inter-agent safety
-distances, actuator limits, and obstacle constraints.
+Multi-robot formation control must satisfy two competing objectives:
 
-The codebase includes centralized CBF, centralized high-order CBF (HOCBF),
-decentralized CBF, and a relaxed decentralized CBF (RDCBF) formulation. The
-deadlock-resolution logic is currently under development and should be treated
-as an experimental idea rather than a finalized method.
+- track a desired formation relative to a leader or reference trajectory;
+- maintain safety by avoiding inter-agent and obstacle collisions while respecting actuator constraints.
 
-## Overview
+This repository studies a two-layer control architecture:
 
-Multi-robot formation control has two competing objectives:
+1. a **distributed formation controller** that generates the nominal control input;
+2. a **CBF-QP safety filter** that minimally modifies the nominal input whenever safety constraints are at risk.
 
-- Maintain a desired formation relative to a leader or reference trajectory.
-- Avoid unsafe behavior such as robot-robot collision, obstacle collision, and
-  excessive control commands.
+<p align="center">
+  <img
+    src="docs/figures/proposed-control-structure.png"
+    alt="Proposed Control Structure"
+    style="width: 100%; max-width: 800px; height: auto;"
+  >
+</p>
 
-The main approach in this repository is to separate the controller into two
-layers:
+## Project Objectives
 
-1. A nominal formation controller computes the desired acceleration for each
-   robot.
-2. A CBF safety filter minimally modifies the nominal control by solving a
-   quadratic program (QP).
+### 1. Distributed formation control
 
-This makes the nominal controller responsible for task performance and the CBF
-filter responsible for enforcing safety.
+The first objective is to understand and implement a distributed state-feedback formation controller. The feedback gains \(K\) and \(K'\) are obtained through an LMI-based design and are used to drive the multi-robot system toward the desired formation using local information.
+
+This controller serves as the **nominal controller** of the overall framework.
+
+### 2. CBF-QP safety filtering
+
+The second objective is to understand, implement, and compare several Control Barrier Function (CBF)-based safety filters:
+
+- Centralized Zeroing CBF (ZCBF)
+- Distributed ZCBF
+- Relaxed Distributed CBF (RDCBF)
+- Centralized High-Order CBF (HOCBF)
+
+The safety filter solves a quadratic program (QP) that keeps the applied control input as close as possible to the nominal controller while enforcing safety constraints.
+
+## Framework
+
+The implemented framework considers:
+
+- inter-agent collision avoidance;
+- obstacle avoidance;
+- actuator and velocity limits;
+- centralized and distributed safety-filter architectures.
+
+A common simulation environment is used to compare the different CBF formulations in terms of behavior, conservativeness, and computational characteristics under the same multi-robot scenarios.
 
 ## Problem Formulation
 
@@ -65,28 +83,6 @@ obstacles using an inflated obstacle radius:
 ```text
 ||p_i - p_obs|| >= r_obs + d_min
 ```
-
-## Control Architecture
-
-The implemented architecture is modular:
-
-- `safety_formation/agents/`: agent and team abstractions.
-- `safety_formation/formation/`: graph topology, adjacency, Laplacian, and
-  augmented Laplacian utilities.
-- `safety_formation/controllers/nominal/`: nominal centralized and distributed
-  formation controllers.
-- `safety_formation/controllers/cbf/`: centralized CBF, HOCBF, decentralized
-  CBF, relaxed decentralized CBF logic, QP solvers, and constraint builders.
-- `safety_formation/simulation/`: scenario setup, simulation runner,
-  disturbances, obstacles, and result containers.
-- `safety_formation/metrics/`: safety, formation, and control-effort metrics.
-- `safety_formation/visualization/`: plotting and animation helpers.
-- `demo/`: notebooks, scripts, and generated media used for validation.
-
-The nominal centralized controller uses the augmented Laplacian `H = L + D_lead`
-to combine follower-follower consensus and leader tracking. The CBF layer then
-projects the nominal control onto the closest safe control satisfying the active
-safety constraints.
 
 ## CBF Safety Filter
 
@@ -194,6 +190,17 @@ Useful result media:
 - `demo/media/relax_decentralized_cbf_validation.mp4`
 - `demo/media/Formation_with_obstacle_and_disturbance.mp4`
 
+## Potential Directions
+
+Several extensions of the current framework are of interest:
+
+1. **Event-triggered communication:** develop an event-triggered communication strategy to improve communication and computational efficiency while preserving the safety guarantees of the CBF framework.
+
+2. **CBFs for uncertain dynamics:** extend the framework to systems with unknown or partially known dynamics by combining CBF-based safety filters with online estimation, adaptive control, or learning-based models.
+
+3. **Scalability for larger multi-robot systems:** study distributed formulations that reduce the computational cost of solving CBF-QPs as the number of agents increases.
+
+
 ## Repository Structure
 
 ```text
@@ -218,62 +225,15 @@ Useful result media:
 +-- README.md
 ```
 
-## How to Run
-
-Create a virtual environment and install the package in editable mode:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python -m pip install -e .
-```
-
-Run the test suite:
-
-```bash
-pytest
-```
-
-Run the basic simulation script:
-
-```bash
-python demo/scripts/basic_simulation.py
-```
-
-Open the validation notebooks:
-
-```bash
-jupyter notebook demo/notebooks/
-```
-
-Some demo scripts and notebooks generate plots or videos, so they may require a
-working Matplotlib backend and the required video writer installed on your
-system.
-
-## Future Work
-
-- Finish and validate the deadlock-resolution module for RDCBF.
-- Add quantitative result tables for minimum distance, formation error, control
-  effort, and safety-violation count.
-- Improve decentralized simulations with dynamic communication topology.
-- Add more obstacle configurations and disturbance models.
-- Compare centralized CBF, HOCBF, decentralized CBF, and RDCBF under the same
-  benchmark scenarios.
-- Reduce debug printing in experimental deadlock code once the method is stable.
-- Add documentation for the mathematical derivation and parameter selection.
-
 ## References
 
-This project is based on concepts from:
+[1] W. Ni and D. Cheng, “Leader-following consensus of multi-agent systems under fixed and switching topologies,” *Systems & Control Letters*, vol. 59, no. 3–4, pp. 209–217, 2010, doi: 10.1016/j.sysconle.2010.01.006.
 
-- Multi-agent formation control with graph Laplacian and leader-follower
-  consensus.
-- Control Barrier Functions for safety-critical control.
-- High-Order Control Barrier Functions for systems with higher relative degree.
-- Quadratic-programming-based safety filters.
-- Decentralized and relaxed CBF formulations for scalable multi-robot systems.
+[2] A. D. Ames, S. Coogan, M. Egerstedt, G. Notomista, K. Sreenath, and P. Tabuada, “Control barrier functions: Theory and applications,” in *Proc. 18th Eur. Control Conf. (ECC)*, Naples, Italy, 2019, pp. 3420–3431, doi: 10.23919/ECC.2019.8796030.
+
+[3] L. Wang, A. D. Ames, and M. Egerstedt, “Safety barrier certificates for collision-free multirobot systems,” *IEEE Trans. Robot.*, vol. 33, no. 3, pp. 661–674, 2017, doi: 10.1109/TRO.2017.2659727.
+
+[4] W. Xiao and C. Belta, “High-order control barrier functions,” *IEEE Trans. Autom. Control*, vol. 67, no. 7, pp. 3655–3662, Jul. 2022, doi: 10.1109/TAC.2021.3105491.
 
 Key implementation dependencies include `numpy`, `scipy`, `matplotlib`,
 `networkx`, `cvxpy`, `qpsolvers`, `cvxopt`, and `quadprog`.
