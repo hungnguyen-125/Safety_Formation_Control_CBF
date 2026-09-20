@@ -104,16 +104,16 @@ The conventional centralized CBF is based on a pairwise braking-distance interpr
 
 The underlying safety condition is written as:
 
-\[
+$$
 \|\Delta p_{ij}\| + \int_{t_0}^{t_0 + T_b} \Delta \bar{v}(t)\,dt \ge D_s,
 \qquad \forall i \neq j
-\]
+$$
 
 where
 
-\[
+$$
 \Delta p_{ij} = p_i - p_j
-\]
+$$
 
 is the relative position between robots \(i\) and \(j\), \(\Delta \bar{v}\) denotes the normal component of their relative velocity, \(T_b\) is the braking time required to reduce the closing velocity to zero, and \(D_s\) is the minimum safety distance.
 
