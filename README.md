@@ -98,11 +98,28 @@ subject to  safety constraints
 
 where `u_nom` is the nominal control input and `u` is the filtered safe input.
 
-#### Convetional Centralized CBF
+#### Conventional Centralized CBF
 
-The centralized CBF formulation uses a velocity-aware barrier function. Relative velocity is incorporated directly into the safety function, so differentiation introduces the acceleration input into the resulting CBF constraint.
+The conventional centralized CBF is based on a pairwise braking-distance interpretation of collision avoidance. For each neighboring pair of robots, safety is evaluated by checking whether their relative closing velocity can be reduced to zero before the inter-agent distance reaches the prescribed safety distance.
 
-This formulation therefore accounts for both the current inter-agent distance and the relative motion between neighboring robots.
+The underlying safety condition is written as:
+
+\[
+\|\Delta p_{ij}\| + \int_{t_0}^{t_0 + T_b} \Delta \bar{v}(t)\,dt \ge D_s,
+\qquad \forall i \neq j
+\]
+
+where
+
+\[
+\Delta p_{ij} = p_i - p_j
+\]
+
+is the relative position between robots \(i\) and \(j\), \(\Delta \bar{v}\) denotes the normal component of their relative velocity, \(T_b\) is the braking time required to reduce the closing velocity to zero, and \(D_s\) is the minimum safety distance.
+
+This formulation leads to a velocity-aware barrier function that accounts for both the current inter-agent distance and how quickly the robots are approaching each other. Since relative velocity is already included in the barrier definition, differentiating the barrier introduces the acceleration control input directly into the resulting CBF constraint.
+
+A detailed derivation of this formulation is provided in the [M1 Safe Formation Control Report](./docs/report/Safe_Formation_Control_M1_Report.pdf).
 
 #### Centralized HOCBF
 
@@ -112,7 +129,7 @@ The HOCBF formulation starts from a purely position-based barrier:
 h_ij = ||p_i - p_j||^2 - d_min^2
 ```
 
-For double-integrator dynamics, this barrier has relative degree two with respect to the acceleration input. The safety condition is therefore constructed recursively until the control input appears.
+For double-integrator dynamics, this barrier has relative degree two with respect to the acceleration input. The safety condition is therefore constructed recursively until the control input appears. 
 
 Both centralized formulations support:
 
