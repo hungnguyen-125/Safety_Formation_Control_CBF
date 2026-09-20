@@ -220,13 +220,13 @@ The RDCBF controller is further evaluated in a formation-control scenario with s
 
 | Video | Description |
 |---|---|
-| [Centralized CBF Formation Control](./media/centralized_cbf_formation_control.mp4) | Centralized CBF applied to formation control. |
-| [Centralized CBF with Dynamic Topology](./media/centralized_cbf_validation_dynamics_topology.mp4) | Validation of the centralized CBF with dynamic topology. |
-| [Centralized HOCBF](./media/centralized_hocbf_validation.mp4) | Validation of the centralized HOCBF controller. |
-| [Distributed CBF](./media/distributed_cbf_validation.mp4) | Validation of the distributed CBF formulation. |
-| [Formation with Obstacles and Disturbance](./media/formation_with_obstacle_and_disturbance.mp4) | Formation control with static obstacles and disturbances. |
-| [Nominal Formation Controller](./media/nominal_formation_controller.mp4) | Baseline formation control without a safety filter. |
-| [Relaxed Distributed CBF](./media/relax_distributed_cbf_validation.mp4) | Validation of the relaxed distributed CBF formulation. |
+| [Centralized CBF Formation Control](demo/media/centralized_cbf_formation_control.mp4) | Centralized CBF applied to formation control. |
+| [Centralized CBF with Dynamic Topology](demo/media/centralized_cbf_validation_dynamics_topology.mp4) | Validation of the centralized CBF with dynamic topology. |
+| [Centralized HOCBF](demo/media/centralized_hocbf_validation.mp4) | Validation of the centralized HOCBF controller. |
+| [Distributed CBF](demo/media/distributed_cbf_validation.mp4) | Validation of the distributed CBF formulation. |
+| [Formation with Obstacles and Disturbance](demo/media/formation_with_obstacle_and_disturbance.mp4) | Formation control with static obstacles and disturbances. |
+| [Nominal Formation Controller](demo/media/nominal_formation_controller.mp4) | Baseline formation control without a safety filter. |
+| [Relaxed Distributed CBF](demo/media/relax_distributed_cbf_validation.mp4) | Validation of the relaxed distributed CBF formulation. |
 
 ## Potential Directions
 
