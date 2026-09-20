@@ -83,7 +83,7 @@ The nominal controller is combined with a safety filter that modifies the contro
 
 ---
 
-## Safety Controllers
+## Safety Controllers/Filters
 
 ### Centralized CBF and HOCBF
 
@@ -98,7 +98,7 @@ subject to  safety constraints
 
 where `u_nom` is the nominal control input and `u` is the filtered safe input.
 
-#### Centralized CBF
+#### Convetional Centralized CBF
 
 The centralized CBF formulation uses a velocity-aware barrier function. Relative velocity is incorporated directly into the safety function, so differentiation introduces the acceleration input into the resulting CBF constraint.
 
@@ -113,8 +113,6 @@ h_ij = ||p_i - p_j||^2 - d_min^2
 ```
 
 For double-integrator dynamics, this barrier has relative degree two with respect to the acceleration input. The safety condition is therefore constructed recursively until the control input appears.
-
-Although the CBF and HOCBF formulations are derived differently, both ultimately generate constraints involving relative position, relative velocity, and acceleration. In the position-swapping experiments, this results in very similar avoidance behavior when both controllers are tuned close to the safety boundary.
 
 Both centralized formulations support:
 
@@ -144,21 +142,6 @@ A more detailed derivation of the CBF formulation and the original safe-formatio
 
 [Safe Formation Control M1 Report](docs/report/Safe_Formation_Control_M1_Report.pdf)
 
-An asymmetric relaxation strategy is also considered. Neighboring constraints can be modified differently according to their relative geometry, slightly reshaping the local feasible control set and creating a preferred direction of motion in symmetric blocking configurations.
-
-The current implementation also contains an experimental deadlock-resolution mechanism. A potential deadlock is detected when the safe control becomes close to zero while the nominal controller still requests significant motion.
-
-Two strategies are currently explored:
-
-- asymmetric modification of neighboring CBF gains;
-- perturbation of the nominal control direction.
-
-The implementation can be found in:
-
-```text
-safety_formation/controllers/cbf/deadlock_manager.py
-```
-
 The deadlock-resolution component is still experimental and should not yet be considered a fully validated contribution.
 
 ## Simulation Scenarios
@@ -177,23 +160,13 @@ Multiple agents are required to move toward a desired formation while avoiding s
 
 This scenario evaluates both inter-agent and agent-obstacle safety constraints while preserving the formation objective.
 
-## Results
+## Selected Results
 
 ### 1. Centralized CBF and HOCBF
 
 #### Position Swapping
 
-Both the centralized CBF and HOCBF controllers are evaluated on the same position-swapping scenario. In both cases, the safety filter modifies the nominal control inputs to maintain the prescribed minimum inter-agent distance while allowing the agents to progress toward their targets.
-
-Despite being derived from different formulations, the two controllers exhibit very similar behavior in this experiment. The conventional CBF used here is constructed from a safety function that already incorporates the relative velocity between agents. Consequently, after differentiating the barrier function, the control input appears explicitly in the resulting constraint.
-
-The HOCBF formulation instead starts from a purely position-based safety function,
-
-\[
-h_{ij} = \|p_i - p_j\|^2 - d_{\min}^2,
-\]
-
-and differentiates it recursively until the control input appears. Therefore, although the two approaches are formulated differently, both ultimately impose safety constraints that depend on relative position, relative velocity, and acceleration. This leads to very similar avoidance behavior when both controllers are tuned close to the safety boundary.
+Despite being derived from different formulations, the two controllers exhibit very similar behavior in this experiment. The reason might be although these two approaches are formulated differently, both ultimately impose safety constraints that depend on relative position, relative velocity, and acceleration. This leads to very similar avoidance behavior when both controllers are tuned close to the safety boundary.
 
 <p align="center">
   <table>
@@ -212,13 +185,12 @@ and differentiates it recursively until the control input appears. Therefore, al
   </table>
 </p>
 
-In this sense, the velocity-aware CBF implicitly incorporates part of the higher-order system dynamics directly into the barrier definition, whereas the HOCBF captures the same dynamics through successive derivatives of a position-based barrier.
 
-### 3. Relaxed Decentralized CBF (RDCBF)
+### 3. Relaxed Distributed CBF (RDCBF)
 
 #### Position Swapping
 
-The RDCBF controller enables decentralized collision avoidance during the position-swapping task while preserving progress toward the agents' individual targets.
+The RDCBF controller enables distributed collision avoidance during the position-swapping task while preserving progress toward the agents' individual targets.
 
 <p align="center">
   <img src="docs/figures/relax_distributed_cbf_validation.gif" width="600">
