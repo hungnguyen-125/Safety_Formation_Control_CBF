@@ -196,13 +196,20 @@ h_{ij} = \|p_i - p_j\|^2 - d_{\min}^2,
 and differentiates it recursively until the control input appears. Therefore, although the two approaches are formulated differently, both ultimately impose safety constraints that depend on relative position, relative velocity, and acceleration. This leads to very similar avoidance behavior when both controllers are tuned close to the safety boundary.
 
 <p align="center">
-  <img src="docs/figures/centralized_cbf_validation_dynamics_topology.gif" width="48%">
-  <img src="docs/figures/centralized_hocbf_validation.gif" width="48%">
-</p>
-
-<p align="center">
-  <b>Centralized CBF</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp
-  <b>Centralized HOCBF</b>
+  <table>
+    <tr>
+      <td align="center">
+        <img src="docs/figures/centralized_cbf_validation_dynamics_topology.gif" width="100%">
+        <br>
+        <sub><b>Centralized CBF</b></sub>
+      </td>
+      <td align="center">
+        <img src="docs/figures/centralized_hocbf_validation.gif" width="100%">
+        <br>
+        <sub><b>Centralized HOCBF</b></sub>
+      </td>
+    </tr>
+  </table>
 </p>
 
 In this sense, the velocity-aware CBF implicitly incorporates part of the higher-order system dynamics directly into the barrier definition, whereas the HOCBF captures the same dynamics through successive derivatives of a position-based barrier.
